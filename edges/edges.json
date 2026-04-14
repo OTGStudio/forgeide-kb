@@ -1,0 +1,787 @@
+[
+  {
+    "from": "PAT_ECS",
+    "to": "PAT_OBJECT_POOL",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECS",
+    "to": "PAT_SPATIAL_PARTITION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BEHAVIOR_TREE",
+    "to": "PAT_STATE_MACHINE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_ROLLBACK_NETCODE",
+    "to": "PAT_GAME_LOOP",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_CLIENT_SIDE_PREDICTION",
+    "to": "PAT_ROLLBACK_NETCODE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_SNAPSHOT_INTERPOLATION",
+    "to": "PAT_CLIENT_SIDE_PREDICTION",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_COMMAND",
+    "to": "PAT_INPUT_BUFFERING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PROC_GEN_CONTENT",
+    "to": "PAT_SAVE_SYSTEM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ABILITY_SYSTEM",
+    "to": "PAT_OBSERVER",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GAME_ECONOMY",
+    "to": "PAT_DIRTY_FLAG",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_DIALOG_SYSTEM",
+    "to": "PAT_OBSERVER",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ACHIEVEMENT_SYSTEM",
+    "to": "PAT_OBSERVER",
+    "rel": "implements"
+  },
+  {
+    "from": "PAT_LOD",
+    "to": "PAT_DIRTY_FLAG",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GAME_FEEL",
+    "to": "PAT_OBSERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GOAP",
+    "to": "PAT_BEHAVIOR_TREE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_GOAP",
+    "to": "PAT_UTILITY_AI",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_STEERING_BEHAVIORS",
+    "to": "PAT_NAVMESH",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_NAVMESH",
+    "to": "PAT_PERCEPTION_SYSTEM",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_DEAD_RECKONING",
+    "to": "PAT_CLIENT_SIDE_PREDICTION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_DELTA_COMPRESSION",
+    "to": "PAT_SNAPSHOT_INTERPOLATION",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_AREA_OF_INTEREST",
+    "to": "PAT_SNAPSHOT_INTERPOLATION",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_DETERMINISTIC_LOCKSTEP",
+    "to": "PAT_ROLLBACK_NETCODE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_ROLLBACK_NETCODE_GGPO",
+    "to": "PAT_DETERMINISTIC_LOCKSTEP",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_LAG_COMPENSATION",
+    "to": "PAT_TIME_SYNC",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_CLIENT_SIDE_PREDICTION",
+    "to": "PAT_AUTHORITATIVE_SERVER",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ENTITY_INTERPOLATION",
+    "to": "PAT_SNAPSHOT_INTERPOLATION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_INTEREST_MANAGEMENT",
+    "to": "PAT_BANDWIDTH_BUDGET",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_REPLICATION_PRIORITY",
+    "to": "PAT_BANDWIDTH_BUDGET",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_DELTA_COMPRESSION",
+    "to": "PAT_BANDWIDTH_BUDGET",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_RELIABLE_UDP",
+    "to": "PAT_CONNECTION_STATE_MACHINE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NAT_TRAVERSAL",
+    "to": "PAT_RELAY_SERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_RECONNECT_REJOIN",
+    "to": "PAT_CONNECTION_STATE_MACHINE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_LOBBY_SESSION",
+    "to": "PAT_CONNECTION_STATE_MACHINE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GPU_INSTANCING",
+    "to": "PAT_DRAW_CALL_BATCHING",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_FRUSTUM_CULLING",
+    "to": "PAT_OCCLUSION_CULLING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_LOD_MANAGEMENT",
+    "to": "PAT_FRUSTUM_CULLING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ASYNC_SCENE_LOADING",
+    "to": "PAT_WORLD_STREAMING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_LEVEL_STREAMING_TRIGGERS",
+    "to": "PAT_ASYNC_SCENE_LOADING",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_JOB_SCHEDULING",
+    "to": "PAT_ECS_ARCHETYPE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_UTILITY_AI",
+    "to": "PAT_COMPOSITE_AI",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GOAP",
+    "to": "PAT_COMPOSITE_AI",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BEHAVIOR_TREE",
+    "to": "PAT_BLACKBOARD",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_BEHAVIOR_TREE",
+    "to": "PAT_FINITE_STATE_MACHINE_AI",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_GOAP",
+    "to": "PAT_BLACKBOARD",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_UTILITY_AI",
+    "to": "PAT_BEHAVIOR_TREE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_PATHFINDING_ASTAR",
+    "to": "PAT_NAVMESH",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_STEERING_BEHAVIORS",
+    "to": "PAT_PATHFINDING_ASTAR",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_CROWD_RVO",
+    "to": "PAT_STEERING_BEHAVIORS",
+    "rel": "implements"
+  },
+  {
+    "from": "PAT_AI_DIRECTOR",
+    "to": "PAT_FINITE_STATE_MACHINE_AI",
+    "rel": "implements"
+  },
+  {
+    "from": "PAT_PERCEPTION_SYSTEM",
+    "to": "PAT_BLACKBOARD",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_SQUAD_AI",
+    "to": "PAT_BEHAVIOR_TREE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_HTN",
+    "to": "PAT_GOAP",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_INFLUENCE_MAP",
+    "to": "PAT_COVER_SYSTEM",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_THREAT_ASSESSMENT",
+    "to": "PAT_BLACKBOARD",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_COVER_SYSTEM",
+    "to": "PAT_NAVMESH",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_PATROL_GRAPH",
+    "to": "PAT_PATHFINDING_ASTAR",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_MEMORY_WORKING_MEMORY",
+    "to": "PAT_PERCEPTION_SYSTEM",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_FLOW_FIELD",
+    "to": "PAT_PATHFINDING_ASTAR",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_REPUTATION_FACTION",
+    "to": "PAT_ECONOMY_LOOP",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECONOMY_LOOP",
+    "to": "PAT_SINK_SOURCE_BALANCE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_CCD",
+    "to": "PAT_SWEPT_VOLUME",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_PLATFORMER",
+    "to": "PAT_OBJECT_POOL",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GENRE_PLATFORMER",
+    "to": "PAT_FSM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_PLATFORMER",
+    "to": "PAT_BRIDGE_FEEL_TUNING",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_RPG_TURNBASED",
+    "to": "PAT_COMMAND",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_RPG_TURNBASED",
+    "to": "PAT_FSM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_RPG_TURNBASED",
+    "to": "PAT_ECONOMY_LOOP",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GENRE_ACTION_RPG",
+    "to": "PAT_BEHAVIOR_TREE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GENRE_ACTION_RPG",
+    "to": "PAT_INVENTORY_GRID",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_ACTION_RPG",
+    "to": "PAT_BRIDGE_LOOT_DESIGN",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_TOWER_DEFENSE",
+    "to": "PAT_OBJECT_POOL",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_TOWER_DEFENSE",
+    "to": "PAT_ECONOMY_LOOP",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_ROGUELITE",
+    "to": "PAT_OBSERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GENRE_BATTLE_ROYALE",
+    "to": "PAT_INTEREST_MGMT",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_BATTLE_ROYALE",
+    "to": "PAT_DELTA_COMPRESSION",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_FIGHTING",
+    "to": "PAT_ROLLBACK_NETCODE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_FIGHTING",
+    "to": "PAT_FSM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_FPS",
+    "to": "PAT_CLIENT_PREDICTION",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_GENRE_FPS",
+    "to": "PAT_OBJECT_POOL",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GENRE_RTS",
+    "to": "PAT_ECONOMY_LOOP",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_BRIDGE_FEEL_TUNING",
+    "to": "PAT_BRIDGE_GAME_FEEL_JUICE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BRIDGE_LOOT_DESIGN",
+    "to": "PAT_BRIDGE_RANDOMNESS_CONTRACT",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_BATTLE_PASS",
+    "to": "PAT_ECON_REWARD_SCHEDULE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_ENERGY",
+    "to": "PAT_ECON_TIME_GATE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_STOREFRONT",
+    "to": "PAT_ECON_TOKEN_SINK",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_PRESTIGE",
+    "to": "PAT_ECON_UPGRADE_PATH",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_LIVE_OPS",
+    "to": "PAT_ECON_SEASONAL_EVENT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_CRAFTING",
+    "to": "PAT_ECON_TOKEN_SINK",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_F2P_ETHICS",
+    "to": "PAT_ECON_ANTI_P2W",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_LTO",
+    "to": "PAT_ECON_STOREFRONT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NARR_QUEST_BRANCH",
+    "to": "PAT_NARR_DIALOGUE_TREE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_NARR_NPC_RELATIONSHIP",
+    "to": "PAT_NARR_FACTION_DISPOSITION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NARR_MORAL_CHOICE",
+    "to": "PAT_NARR_CONSEQUENCE_DELAY",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NARR_COMPANION",
+    "to": "PAT_NARR_NPC_RELATIONSHIP",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_NARR_ENV_STORY",
+    "to": "PAT_NARR_CODEX",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NARR_WORLD_STATE",
+    "to": "PAT_NARR_QUEST_BRANCH",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_A11Y_COLORBLIND",
+    "to": "PAT_A11Y_HIGH_CONTRAST",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_A11Y_SCREEN_READER",
+    "to": "PAT_A11Y_SUBTITLE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_A11Y_MOTOR",
+    "to": "PAT_A11Y_ONE_BUTTON",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_A11Y_REDUCE_MOTION",
+    "to": "PAT_A11Y_COGNITIVE_LOAD",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PLAT_CROSS_SAVE",
+    "to": "PAT_PLAT_CERTIFICATION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PLAT_CLOUD_GAMING",
+    "to": "PAT_PLAT_STREAMING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_UPGRADE_PATH",
+    "to": "PAT_ECON_TOKEN_SINK",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_LIVE_OPS",
+    "to": "PAT_ECON_BATTLE_PASS",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_LIVE_OPS",
+    "to": "PAT_ECON_STOREFRONT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_TIME_GATE",
+    "to": "PAT_ECON_STOREFRONT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_REWARD_SCHEDULE",
+    "to": "PAT_ECON_TOKEN_SINK",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_BATTLE_PASS",
+    "to": "PAT_ECON_LIVE_OPS",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_CRAFTING",
+    "to": "PAT_ECON_UPGRADE_PATH",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_PRESTIGE",
+    "to": "PAT_ECON_REWARD_SCHEDULE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_ENERGY",
+    "to": "PAT_ECON_STOREFRONT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_TOKEN_SINK",
+    "to": "PAT_GAME_ECONOMY",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_STOREFRONT",
+    "to": "PAT_ECONOMY_LOOP",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_CRAFTING",
+    "to": "PAT_SAVE_SYSTEM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_BATTLE_PASS",
+    "to": "PAT_ACHIEVEMENT_SYSTEM",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ECON_LIVE_OPS",
+    "to": "PAT_OBSERVER",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ECON_PRESTIGE",
+    "to": "PAT_SAVE_SYSTEM",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ARENA_ALLOCATOR",
+    "to": "PAT_CUSTOM_ALLOCATOR",
+    "rel": "implements"
+  },
+  {
+    "from": "PAT_POOL_ALLOCATOR",
+    "to": "PAT_CUSTOM_ALLOCATOR",
+    "rel": "implements"
+  },
+  {
+    "from": "PAT_POOL_ALLOCATOR",
+    "to": "PAT_OBJECT_POOL",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_ARENA_ALLOCATOR",
+    "to": "PAT_POOL_ALLOCATOR",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_ZERO_COPY",
+    "to": "PAT_MMAP_IO",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_LOCK_FREE_QUEUE",
+    "to": "PAT_WAIT_FREE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_LOCK_FREE_QUEUE",
+    "to": "PAT_MEMORY_BARRIER",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_THREAD_POOL",
+    "to": "PAT_FIBER_COROUTINE",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_THREAD_POOL",
+    "to": "PAT_ASYNC_COMPUTE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_SIMD_INTRINSICS",
+    "to": "PAT_ILP",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_SIMD_INTRINSICS",
+    "to": "PAT_SKINNED_INSTANCE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_CACHE_OBLIVIOUS",
+    "to": "PAT_ECS",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BRANCH_PREDICT",
+    "to": "PAT_CACHE_OBLIVIOUS",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BATCH_RENDERER",
+    "to": "PAT_MULTI_DRAW",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_BATCH_RENDERER",
+    "to": "PAT_GPU_DRIVEN",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_MESH_SHADER",
+    "to": "PAT_GPU_DRIVEN",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_VISIBILITY_BUFFER",
+    "to": "PAT_GPU_DRIVEN",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_VISIBILITY_BUFFER",
+    "to": "PAT_OCCLUSION_CULL",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_BINDLESS",
+    "to": "PAT_VIRTUAL_TEXTURE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_VRS",
+    "to": "PAT_TEMPORAL_UPSCALE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_RAY_TRACING",
+    "to": "PAT_SPARSE_SHADOWS",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_FRAME_GRAPH",
+    "to": "PAT_ASYNC_COMPUTE",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_IMPOSTOR",
+    "to": "PAT_LOD",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_IMPOSTOR",
+    "to": "PAT_SPATIAL_PARTITION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_SKINNED_INSTANCE",
+    "to": "PAT_BATCH_RENDERER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_QUIC",
+    "to": "PAT_WEBSOCKET_FALLBACK",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_QUIC",
+    "to": "PAT_DTLS",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_WEBRTC_STREAM",
+    "to": "PAT_DTLS",
+    "rel": "requires"
+  },
+  {
+    "from": "PAT_ANYCAST",
+    "to": "PAT_EDGE_SERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_EDGE_SERVER",
+    "to": "PAT_CDN_INTEGRATION",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_EDGE_SERVER",
+    "to": "PAT_DEDICATED_SERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_MULTICAST_UDP",
+    "to": "PAT_NETCODE_PREDICT",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PROTOBUF_SCHEMA",
+    "to": "PAT_ROLLBACK_NETCODE",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_NETWORK_SIM",
+    "to": "PAT_CHAOS_ENGINEERING",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PROPERTY_TEST",
+    "to": "PAT_FUZZ_TEST",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_GOLDEN_FILE",
+    "to": "PAT_SNAPSHOT_TEST",
+    "rel": "alternatives"
+  },
+  {
+    "from": "PAT_CONTRACT_TEST",
+    "to": "PAT_E2E_REPLAY",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_LOAD_TEST_MP",
+    "to": "PAT_DEDICATED_SERVER",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_PERF_CI_GATE",
+    "to": "PAT_LOAD_TEST_MP",
+    "rel": "often_combined_with"
+  },
+  {
+    "from": "PAT_FLAKINESS",
+    "to": "PAT_E2E_REPLAY",
+    "rel": "often_combined_with"
+  }
+]

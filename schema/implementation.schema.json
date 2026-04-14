@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeide.com/schema/kb/implementation/v1",
+  "title": "ForgeIDE KB Implementation",
+  "description": "Schema for an engine-specific implementation of a pattern",
+  "type": "object",
+  "required": ["pattern_id", "engine", "language", "code", "notes"],
+  "properties": {
+    "pattern_id": {
+      "type": "string",
+      "pattern": "^PAT_[A-Z0-9_]+$",
+      "description": "References the pattern this implements"
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["unity", "unreal", "godot", "custom"],
+      "description": "Target game engine"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["csharp", "cpp", "gdscript", "rust", "hlsl", "glsl"],
+      "description": "Programming language of the code sample"
+    },
+    "code": {
+      "type": "string",
+      "description": "Code sample demonstrating the pattern in this engine"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Engine-specific notes, tips, and version requirements"
+    }
+  },
+  "additionalProperties": false
+}

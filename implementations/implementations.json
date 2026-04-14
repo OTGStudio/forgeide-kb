@@ -1,0 +1,1178 @@
+[
+  {
+    "pattern_id": "PAT_GAME_LOOP",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity's game loop is implicit:\n// FixedUpdate() â€” fixed timestep (physics)\n// Update() â€” once per frame (gameplay)\n// LateUpdate() â€” after all Update calls (camera)\nvoid FixedUpdate() { /* physics logic */ }\nvoid Update() { /* input + gameplay */ }\nvoid LateUpdate() { /* camera follow */ }",
+    "notes": "Time.fixedDeltaTime defaults to 0.02s (50Hz). Time.deltaTime for frame-rate-independent movement. Use Time.timeScale for pause."
+  },
+  {
+    "pattern_id": "PAT_GAME_LOOP",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 Tick function â€” called every frame\nvoid AMyActor::Tick(float DeltaTime) {\n    Super::Tick(DeltaTime);\n    // Gameplay logic here\n}\n// Physics runs on a fixed sub-step internally\n// Configure in Project Settings > Physics > Substepping",
+    "notes": "UE5 uses variable tick by default. Enable substepping for deterministic physics. TickInterval can throttle per-actor tick rate."
+  },
+  {
+    "pattern_id": "PAT_GAME_LOOP",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot's game loop:\n# _physics_process(delta) â€” fixed timestep (default 60Hz)\n# _process(delta) â€” once per frame (variable)\nfunc _physics_process(delta: float) -> void:\n    # Physics and gameplay logic\n    pass\nfunc _process(delta: float) -> void:\n    # Rendering, UI, input\n    pass",
+    "notes": "Physics tick rate set in Project Settings > Physics > Common > Physics Ticks Per Second. Use delta for frame-independent math."
+  },
+  {
+    "pattern_id": "PAT_OBJECT_POOL",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using UnityEngine.Pool;\n\nvar pool = new ObjectPool<GameObject>(\n    createFunc: () => Instantiate(prefab),\n    actionOnGet: obj => obj.SetActive(true),\n    actionOnRelease: obj => obj.SetActive(false),\n    actionOnDestroy: obj => Destroy(obj),\n    defaultCapacity: 20,\n    maxSize: 100\n);\nvar bullet = pool.Get();\n// When done: pool.Release(bullet);",
+    "notes": "Built-in since Unity 2021. Pre-warm with Get/Release loops at scene start. maxSize silently destroys overflow objects."
+  },
+  {
+    "pattern_id": "PAT_OBJECT_POOL",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 doesn't have a built-in pool â€” use actor recycling:\nTArray<AActor*> Pool;\n\nAActor* GetFromPool() {\n    for (auto* A : Pool) {\n        if (A->IsHidden()) {\n            A->SetActorHiddenInGame(false);\n            A->SetActorEnableCollision(true);\n            return A;\n        }\n    }\n    return GetWorld()->SpawnActor<AMyProjectile>();\n}",
+    "notes": "Disable tick and collision on pooled actors. Use SetActorTickEnabled(false). Consider UE5's FObjectPool for UObject pooling."
+  },
+  {
+    "pattern_id": "PAT_OBJECT_POOL",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "var pool: Array[Node] = []\nvar prefab: PackedScene = preload(\"res://bullet.tscn\")\n\nfunc get_pooled() -> Node:\n    for obj in pool:\n        if not obj.visible:\n            obj.visible = true\n            return obj\n    var new_obj = prefab.instantiate()\n    pool.append(new_obj)\n    add_child(new_obj)\n    return new_obj\n\nfunc release(obj: Node) -> void:\n    obj.visible = false",
+    "notes": "Use set_process(false) and set_physics_process(false) on released objects. Pre-instantiate during _ready() for stutter-free gameplay."
+  },
+  {
+    "pattern_id": "PAT_OBSERVER",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// C# events (preferred over UnityEvent for code-only):\npublic static event Action<int> OnScoreChanged;\n\n// Raise: OnScoreChanged?.Invoke(newScore);\n// Subscribe: OnScoreChanged += HandleScore;\n// Unsubscribe in OnDestroy: OnScoreChanged -= HandleScore;",
+    "notes": "Always unsubscribe in OnDestroy to prevent memory leaks. For designer-facing events, use UnityEvent with Inspector binding."
+  },
+  {
+    "pattern_id": "PAT_OBSERVER",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 Delegates:\nDECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnScoreChanged, int32, NewScore);\n\nUPROPERTY(BlueprintAssignable)\nFOnScoreChanged OnScoreChanged;\n\n// Broadcast: OnScoreChanged.Broadcast(NewScore);\n// Subscribe: Obj->OnScoreChanged.AddDynamic(this, &AMyActor::HandleScore);",
+    "notes": "Use DYNAMIC delegates for Blueprint binding, non-dynamic for C++-only (faster). Always unbind in EndPlay."
+  },
+  {
+    "pattern_id": "PAT_OBSERVER",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot Signals (first-class observer pattern):\nsignal score_changed(new_score: int)\n\n# Emit: score_changed.emit(new_score)\n# Connect: emitter.score_changed.connect(_on_score_changed)\n# Disconnect: emitter.score_changed.disconnect(_on_score_changed)",
+    "notes": "Signals are Godot's native observer pattern. Connect in _ready(), disconnect automatically on free(). Use @export for editor-connectable signals."
+  },
+  {
+    "pattern_id": "PAT_COMMAND",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public interface ICommand {\n    void Execute();\n    void Undo();\n}\npublic class MoveCommand : ICommand {\n    Transform target; Vector3 prev;\n    public MoveCommand(Transform t, Vector3 to) {\n        target = t; prev = t.position;\n    }\n    public void Execute() => target.position = newPos;\n    public void Undo() => target.position = prev;\n}",
+    "notes": "Store commands in a Stack for undo. Use for input replay, networked action queues, and level editor operations."
+  },
+  {
+    "pattern_id": "PAT_COMMAND",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 uses GEditor transactions for editor undo:\nclass FMyCommand {\npublic:\n    virtual void Execute() = 0;\n    virtual void Undo() = 0;\n};\n// For gameplay: TArray<TUniquePtr<FMyCommand>> History;\n// History.Add(MakeUnique<FMoveCommand>(Actor, NewPos));\n// History.Last()->Execute();",
+    "notes": "UE5 Editor has built-in transaction system (GEditor->BeginTransaction). For gameplay undo, roll your own command stack."
+  },
+  {
+    "pattern_id": "PAT_COMMAND",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "class_name Command extends RefCounted\nfunc execute() -> void: pass\nfunc undo() -> void: pass\n\nclass_name MoveCommand extends Command\nvar target: Node3D\nvar old_pos: Vector3\nvar new_pos: Vector3\nfunc execute() -> void: target.position = new_pos\nfunc undo() -> void: target.position = old_pos",
+    "notes": "Use an Array[Command] as a history stack. Godot's UndoRedo class provides built-in undo for editor plugins."
+  },
+  {
+    "pattern_id": "PAT_STATE_MACHINE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public enum EnemyState { Idle, Chase, Attack }\nEnemyState state = EnemyState.Idle;\n\nvoid Update() {\n    switch (state) {\n        case EnemyState.Idle:\n            if (CanSeePlayer()) state = EnemyState.Chase;\n            break;\n        case EnemyState.Chase:\n            MoveToward(player);\n            if (InRange()) state = EnemyState.Attack;\n            break;\n    }\n}",
+    "notes": "For complex FSMs, use Unity's Animator as a visual state machine. Scriptable-object-based FSMs scale better than switch statements."
+  },
+  {
+    "pattern_id": "PAT_STATE_MACHINE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Use Gameplay Ability System or AI Controller states\nENUM(BlueprintType) enum class EEnemyState : uint8 {\n    Idle, Chase, Attack\n};\n\nvoid AEnemy::Tick(float DeltaTime) {\n    switch (CurrentState) {\n        case EEnemyState::Idle:\n            if (CanSeePlayer()) SetState(EEnemyState::Chase);\n            break;\n        // ...\n    }\n}",
+    "notes": "UE5 AI uses Behavior Trees (preferred) or State Trees (UE5.4+). Use Blueprint enums for designer-visible states."
+  },
+  {
+    "pattern_id": "PAT_STATE_MACHINE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "enum State { IDLE, CHASE, ATTACK }\nvar current_state: State = State.IDLE\n\nfunc _physics_process(delta: float) -> void:\n    match current_state:\n        State.IDLE:\n            if can_see_player():\n                current_state = State.CHASE\n        State.CHASE:\n            move_toward(player.position, speed * delta)\n            if in_range():\n                current_state = State.ATTACK",
+    "notes": "For complex FSMs, use a State node pattern: each state is a child node with enter/exit/process methods. Godot 4 has no built-in FSM."
+  },
+  {
+    "pattern_id": "PAT_ECS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity DOTS ECS (Entities package):\npublic struct Velocity : IComponentData { public float3 Value; }\npublic struct Position : IComponentData { public float3 Value; }\n\n[BurstCompile]\npublic partial struct MoveSystem : ISystem {\n    public void OnUpdate(ref SystemState state) {\n        foreach (var (pos, vel) in\n            SystemAPI.Query<RefRW<Position>, RefRO<Velocity>>()) {\n            pos.ValueRW.Value += vel.ValueRO.Value * SystemAPI.Time.DeltaTime;\n        }\n    }\n}",
+    "notes": "DOTS ECS requires Unity 2022.3+ with Entities package. Burst compiler required for performance. Hybrid renderer bridges ECS and GameObjects."
+  },
+  {
+    "pattern_id": "PAT_ECS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 Mass Entity (experimental ECS):\n// Define Fragment (component data):\nUSTRUCT() struct FMassVelocityFragment : public FMassFragment {\n    GENERATED_BODY()\n    FVector Velocity;\n};\n// Processor (system):\nvoid UMassMoveProcessor::Execute(\n    FMassEntityManager& EntityManager,\n    FMassExecutionContext& Context) {\n    // Process entity chunks with velocity + transform\n}",
+    "notes": "Mass Entity is UE5's ECS framework. Still experimental. Most UE5 projects use traditional Actor/Component model instead."
+  },
+  {
+    "pattern_id": "PAT_ECS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot has no built-in ECS â€” use a lightweight approach:\n# Components as plain dictionaries or Resources:\nvar entities: Array[Dictionary] = []\n\nfunc add_entity(pos: Vector3, vel: Vector3) -> int:\n    entities.append({\"pos\": pos, \"vel\": vel})\n    return entities.size() - 1\n\nfunc move_system(delta: float) -> void:\n    for e in entities:\n        e[\"pos\"] += e[\"vel\"] * delta",
+    "notes": "For serious ECS in Godot, consider GDExtension with a Rust ECS (bevy_ecs, hecs). Pure GDScript ECS is limited by interpreter speed."
+  },
+  {
+    "pattern_id": "PAT_BEHAVIOR_TREE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity: Use a BT library (e.g., NodeCanvas, Behavior Designer)\n// Or implement a minimal BT:\npublic enum BTStatus { Success, Failure, Running }\npublic abstract class BTNode {\n    public abstract BTStatus Tick();\n}\npublic class Selector : BTNode {\n    List<BTNode> children;\n    public override BTStatus Tick() {\n        foreach (var c in children)\n            if (c.Tick() != BTStatus.Failure) return c.Tick();\n        return BTStatus.Failure;\n    }\n}",
+    "notes": "Unity has no built-in BT. Popular assets: Behavior Designer, NodeCanvas. Keep trees shallow â€” deep trees are hard to debug."
+  },
+  {
+    "pattern_id": "PAT_BEHAVIOR_TREE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 built-in Behavior Tree:\n// 1. Create BT asset in Editor\n// 2. Add Tasks, Decorators, Services\nUCLASS()\nclass UBTTask_FindPatrolPoint : public UBTTaskNode {\n    GENERATED_BODY()\n    virtual EBTNodeResult::Type ExecuteTask(\n        UBehaviorTreeComponent& OwnerComp,\n        uint8* NodeMemory) override;\n};",
+    "notes": "UE5 BTs are the standard AI framework. Use Blackboard for shared state. EQS (Environment Query System) for spatial queries. Editor has visual BT debugger."
+  },
+  {
+    "pattern_id": "PAT_BEHAVIOR_TREE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Use LimboAI addon or implement minimal BT:\nclass_name BTNode extends Node\nenum Status { SUCCESS, FAILURE, RUNNING }\nfunc tick(_delta: float) -> Status:\n    return Status.FAILURE\n\nclass_name BTSelector extends BTNode\nfunc tick(delta: float) -> Status:\n    for child in get_children():\n        var result = child.tick(delta)\n        if result != Status.FAILURE:\n            return result\n    return Status.FAILURE",
+    "notes": "No built-in BT in Godot. LimboAI is the most popular addon. Alternatively, use the node tree itself as a BT structure."
+  },
+  {
+    "pattern_id": "PAT_SPATIAL_PARTITION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity Physics spatial queries (built-in):\nCollider[] nearby = Physics.OverlapSphere(\n    transform.position, radius, layerMask\n);\n// For custom spatial partitioning:\n// Use a grid: Dictionary<Vector2Int, List<Entity>>\nvar cell = new Vector2Int(\n    Mathf.FloorToInt(pos.x / cellSize),\n    Mathf.FloorToInt(pos.z / cellSize)\n);",
+    "notes": "Unity's physics engine uses a BVH internally. For non-physics queries (AI awareness, AoE), a simple grid is often sufficient and faster than OverlapSphere."
+  },
+  {
+    "pattern_id": "PAT_SPATIAL_PARTITION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 World Partition (large worlds):\n// Enable in World Settings > World Partition\n// UE5 spatial queries:\nTArray<FOverlapResult> Overlaps;\nGetWorld()->OverlapMultiByChannel(\n    Overlaps, Location, FQuat::Identity,\n    ECC_Pawn, FCollisionShape::MakeSphere(Radius)\n);",
+    "notes": "UE5 World Partition handles level streaming automatically. For gameplay queries, use OverlapMulti or SweepMulti. Collision channels control query scope."
+  },
+  {
+    "pattern_id": "PAT_SPATIAL_PARTITION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot physics spatial queries:\nvar space = get_world_3d().direct_space_state\nvar query = PhysicsShapeQueryParameters3D.new()\nquery.shape = SphereShape3D.new()\nquery.shape.radius = 10.0\nquery.transform.origin = global_position\nvar results = space.intersect_shape(query, 32)",
+    "notes": "Godot uses Jolt or GodotPhysics. For custom spatial partitioning, implement a grid in GDScript or use Area3D with monitoring enabled."
+  },
+  {
+    "pattern_id": "PAT_DIRTY_FLAG",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "private bool _isDirty = true;\nprivate Matrix4x4 _cachedWorldMatrix;\n\npublic Matrix4x4 WorldMatrix {\n    get {\n        if (_isDirty) {\n            _cachedWorldMatrix = CalculateWorldMatrix();\n            _isDirty = false;\n        }\n        return _cachedWorldMatrix;\n    }\n}\npublic void SetPosition(Vector3 pos) {\n    transform.position = pos;\n    _isDirty = true;\n}",
+    "notes": "Unity's Transform already uses dirty flags internally. Apply this pattern for expensive derived data: pathfinding caches, visibility sets, LOD computations."
+  },
+  {
+    "pattern_id": "PAT_DIRTY_FLAG",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 uses dirty flags extensively internally:\nbool bIsDirty = true;\nFMatrix CachedWorldMatrix;\n\nconst FMatrix& GetWorldMatrix() {\n    if (bIsDirty) {\n        CachedWorldMatrix = CalcWorldMatrix();\n        bIsDirty = false;\n    }\n    return CachedWorldMatrix;\n}\nvoid SetLocation(FVector NewLoc) {\n    SetActorLocation(NewLoc);\n    bIsDirty = true;\n}",
+    "notes": "UE5's render thread uses dirty flags for transform updates. MarkRenderStateDirty() is the engine's version of this pattern."
+  },
+  {
+    "pattern_id": "PAT_DIRTY_FLAG",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "var _dirty: bool = true\nvar _cached_result: float = 0.0\n\nfunc get_expensive_value() -> float:\n    if _dirty:\n        _cached_result = _compute_expensive()\n        _dirty = false\n    return _cached_result\n\nfunc invalidate() -> void:\n    _dirty = true",
+    "notes": "Godot's notification system (NOTIFICATION_TRANSFORM_CHANGED) is the engine's dirty flag mechanism. Use for caching pathfinding, visibility, or AI queries."
+  },
+  {
+    "pattern_id": "PAT_ROLLBACK_NETCODE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity: Use GGPO-based libraries (e.g., Backstep, FishNet Prediction)\n// Core loop:\nvoid NetworkUpdate() {\n    SaveState(currentFrame);\n    ApplyInput(localInput);\n    if (receivedRemoteInput) {\n        if (mispredicted) {\n            RestoreState(confirmedFrame);\n            for (int f = confirmedFrame; f <= currentFrame; f++)\n                Resimulate(f);\n        }\n    }\n}",
+    "notes": "Rollback requires deterministic simulation. Use fixed-point math or ensure floating-point consistency. Unity Netcode for GameObjects has prediction support."
+  },
+  {
+    "pattern_id": "PAT_ROLLBACK_NETCODE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 uses server-authoritative prediction by default:\n// For rollback: Use Gameplay Prediction framework\n// or third-party (GGPO UE5 plugin)\nFSavedMove_Character SavedMove;\n// Client predicts locally, server validates\n// On mismatch: client snaps to server state\n// Smooth correction via ClientAdjustPosition",
+    "notes": "UE5's CharacterMovement has built-in client-side prediction and server correction. Full rollback (fighting games) needs custom implementation or GGPO plugin."
+  },
+  {
+    "pattern_id": "PAT_ROLLBACK_NETCODE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Use SG Physics or custom rollback\nvar state_buffer: Array[Dictionary] = []\n\nfunc save_state(frame: int) -> void:\n    state_buffer.append({\n        \"frame\": frame,\n        \"positions\": get_all_positions()\n    })\n\nfunc rollback_to(frame: int) -> void:\n    var state = state_buffer[frame]\n    restore_positions(state[\"positions\"])\n    for f in range(frame, current_frame):\n        resimulate(f)",
+    "notes": "Godot has no built-in rollback. SG Physics (addon) provides deterministic physics for rollback. Use SceneTree.set_multiplayer for basic networking."
+  },
+  {
+    "pattern_id": "PAT_SNAPSHOT_INTERPOLATION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Mirror: NetworkTransform handles interpolation automatically\n// For custom: buffer snapshots and lerp\npublic class SnapshotInterpolation : NetworkBehaviour {\n    private Queue<Snapshot> buffer = new();\n    private float delay = 0.1f; // 100ms buffer\n\n    [ClientRpc]\n    void RpcReceiveSnapshot(Vector3 pos, float time) {\n        buffer.Enqueue(new Snapshot(pos, time));\n    }\n\n    void Update() {\n        if (!isLocalPlayer && buffer.Count >= 2) {\n            var renderTime = NetworkTime.time - delay;\n            // Interpolate between two buffered states\n        }\n    }\n}",
+    "notes": "Mirror's NetworkTransform v2 uses snapshot interpolation by default. Fish-Net provides TransformSmoother for similar functionality."
+  },
+  {
+    "pattern_id": "PAT_SNAPSHOT_INTERPOLATION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: CharacterMovementComponent handles interpolation\n// For custom: use FRepMovement and smoothing\nvoid AMyActor::GetLifetimeReplicatedProps(\n    TArray<FLifetimeProperty>& OutProps) const {\n    DOREPLIFETIME(AMyActor, ReplicatedPosition);\n}\n\nvoid AMyActor::OnRep_Position() {\n    // Interpolate from current to replicated\n    StartPos = GetActorLocation();\n    TargetPos = ReplicatedPosition;\n    InterpAlpha = 0.f;\n}",
+    "notes": "UE5's FRepMovement handles most interpolation automatically. Custom actors need OnRep callbacks with manual lerp."
+  },
+  {
+    "pattern_id": "PAT_SNAPSHOT_INTERPOLATION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot 4: MultiplayerSynchronizer with interpolation\n# On server: update_interval = 0.05 (20 Hz)\n# On client: interpolate between two buffered states\nvar state_buffer = []\nvar interpolation_delay = 0.1 # seconds\n\nfunc _process(delta):\n    if multiplayer.is_server(): return\n    var render_time = Time.get_ticks_msec() / 1000.0 - interpolation_delay\n    interpolate_to(render_time)",
+    "notes": "Use MultiplayerSynchronizer's built-in interpolation (Godot 4.3+) when possible. Manual buffer needed for sub-100ms latency targets."
+  },
+  {
+    "pattern_id": "PAT_CLIENT_SIDE_PREDICTION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Mirror: NetworkBehaviour with [Command] for server validation\n[Command]\nvoid CmdMove(Vector3 input) {\n    // Server validates + applies\n    transform.position += input * speed * Time.fixedDeltaTime;\n    RpcCorrectPosition(transform.position);\n}\n[ClientRpc]\nvoid RpcCorrectPosition(Vector3 serverPos) {\n    if (Vector3.Distance(predictedPos, serverPos) > 0.1f)\n        transform.position = serverPos;\n}",
+    "notes": "Use Fish-Net's PredictionManager for production-quality rollback. Mirror prediction requires manual input history and reconciliation."
+  },
+  {
+    "pattern_id": "PAT_CLIENT_SIDE_PREDICTION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: CharacterMovementComponent has built-in prediction\n// Key: bReplicateMovement = true on Character\n// Custom prediction:\nFSavedMove_Character* SavedMove;\nvoid AMyCharacter::PerformMovement(float DeltaTime) {\n    // Client predicts locally\n    Super::PerformMovement(DeltaTime);\n    // Server validates via ServerMove RPC\n    // Correction via ClientAdjustPosition\n}",
+    "notes": "UE5 CharacterMovement handles prediction/correction automatically. Custom actors need FSavedMove subclass for replay."
+  },
+  {
+    "pattern_id": "PAT_CLIENT_SIDE_PREDICTION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot 4: Manual prediction with input buffer\nvar input_buffer: Array[Dictionary] = []\nvar predicted_position: Vector3\n\nfunc _physics_process(delta):\n    if is_multiplayer_authority():\n        var input = get_input()\n        input_buffer.append({\"tick\": tick, \"input\": input})\n        predicted_position = apply_input(predicted_position, input)\n        send_input_to_server.rpc_id(1, input, tick)\n\n@rpc(\"authority\")\nfunc correct_state(server_pos: Vector3, server_tick: int):\n    # Reconcile: replay inputs from server_tick\n    predicted_position = server_pos\n    for i in range(server_tick, current_tick):\n        predicted_position = apply_input(predicted_position, input_buffer[i])",
+    "notes": "Godot has no built-in prediction. Implement manually or use GodotSteam/GDNet addon. MultiplayerSynchronizer handles authority transfer."
+  },
+  {
+    "pattern_id": "PAT_LAG_COMPENSATION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Server-side lag compensation\npublic class LagCompensation : NetworkBehaviour {\n    private List<HistoryState> history = new();\n\n    [Command]\n    void CmdFire(float clientTime) {\n        // Rewind all hitboxes to client's perceived time\n        var state = FindClosestState(clientTime);\n        RewindHitboxes(state);\n        // Perform raycast at rewound positions\n        if (Physics.Raycast(origin, dir, out hit)) {\n            hit.collider.GetComponent<Health>().TakeDamage(dmg);\n        }\n        RestoreHitboxes();\n    }\n}",
+    "notes": "Mirror provides NetworkTime.rtt for RTT estimation. Valve-style lag compensation buffers 1 second of position history (tick rate * 1s frames)."
+  },
+  {
+    "pattern_id": "PAT_LAG_COMPENSATION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Built-in lag compensation via ServerRewindTime\nvoid AMyWeapon::ServerFire_Implementation(\n    FVector Origin, FVector Direction, float ClientTime) {\n    // Rewind characters to ClientTime\n    ULagCompensationComponent::RewindActors(ClientTime);\n    // Perform hit detection\n    FHitResult Hit;\n    GetWorld()->LineTraceSingleByChannel(\n        Hit, Origin, Origin + Direction * Range,\n        ECC_Pawn);\n    if (Hit.bBlockingHit) {\n        ApplyDamage(Hit.GetActor(), Damage);\n    }\n    ULagCompensationComponent::RestoreActors();\n}",
+    "notes": "UE5 provides ULagCompensationComponent for automatic rewind. Custom implementations use FRepMovement history buffer."
+  },
+  {
+    "pattern_id": "PAT_LAG_COMPENSATION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Manual lag compensation\nvar position_history: Array[Dictionary] = [] # [{tick, positions}]\n\nfunc record_state(tick: int):\n    var snapshot = {}\n    for player in get_tree().get_nodes_in_group(\"players\"):\n        snapshot[player.name] = player.global_position\n    position_history.append({\"tick\": tick, \"data\": snapshot})\n    if position_history.size() > 60: position_history.pop_front()\n\nfunc rewind_and_check(client_tick: int, origin: Vector3, dir: Vector3):\n    var state = find_state(client_tick)\n    # Temporarily move hitboxes to historical positions\n    # Perform raycast, then restore",
+    "notes": "No built-in lag compensation in Godot. Must implement position history buffer and rewind manually. Keep 1 second of history at server tick rate."
+  },
+  {
+    "pattern_id": "PAT_AUTHORITATIVE_SERVER",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Mirror: Server authority is the default model\npublic class AuthoritativePlayer : NetworkBehaviour {\n    [Command] // Client â†’ Server\n    void CmdRequestMove(Vector3 input) {\n        // Server validates input\n        if (input.magnitude > maxSpeed) return;\n        transform.position += input * Time.deltaTime;\n    }\n    // Server state auto-syncs via [SyncVar] or NetworkTransform\n    [SyncVar] public int health;\n}",
+    "notes": "Mirror and Fish-Net are server-authoritative by default. [Command] runs on server, [ClientRpc] broadcasts to clients. [SyncVar] auto-replicates."
+  },
+  {
+    "pattern_id": "PAT_AUTHORITATIVE_SERVER",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Server authority is built into the replication system\nUFUNCTION(Server, Reliable)\nvoid ServerMove(FVector Input);\n\nvoid AMyPawn::ServerMove_Implementation(FVector Input) {\n    // Runs on server only\n    if (Input.Size() > MaxSpeed) return;\n    AddMovementInput(Input);\n}\n\n// DOREPLIFETIME replicates state to all clients\nvoid AMyPawn::GetLifetimeReplicatedProps(\n    TArray<FLifetimeProperty>& Props) const {\n    DOREPLIFETIME(AMyPawn, Health);\n}",
+    "notes": "UE5's networking is server-authoritative by design. Use UFUNCTION(Server) for client-to-server RPCs. DOREPLIFETIME for state replication."
+  },
+  {
+    "pattern_id": "PAT_AUTHORITATIVE_SERVER",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot 4: Use multiplayer authority system\nfunc _ready():\n    # Server (peer 1) owns game state\n    set_multiplayer_authority(1)\n\n@rpc(\"any_peer\", \"call_remote\", \"reliable\")\nfunc request_move(input: Vector3):\n    if not multiplayer.is_server(): return\n    # Validate on server\n    if input.length() > MAX_SPEED: return\n    position += input * delta\n    # Broadcast to all clients\n    sync_position.rpc(position)\n\n@rpc(\"authority\", \"call_remote\", \"unreliable\")\nfunc sync_position(pos: Vector3):\n    position = pos",
+    "notes": "Godot 4 MultiplayerAPI with set_multiplayer_authority(). @rpc annotations control who can call and reliability. Server validates all state changes."
+  },
+  {
+    "pattern_id": "PAT_DETERMINISTIC_LOCKSTEP",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Deterministic lockstep: only send inputs\npublic class LockstepManager : MonoBehaviour {\n    private Dictionary<int, PlayerInput[]> inputBuffer;\n    private int currentTick;\n\n    void FixedUpdate() {\n        if (!HasAllInputsForTick(currentTick)) return;\n        // All clients simulate identical state\n        var inputs = inputBuffer[currentTick];\n        foreach (var input in inputs)\n            SimulatePlayer(input);\n        currentTick++;\n    }\n    // Use FixedPoint math to ensure determinism\n}",
+    "notes": "Unity's floating point is NOT deterministic across platforms. Use fixed-point math libraries (e.g. Fix64) or BEPUphysics for deterministic simulation."
+  },
+  {
+    "pattern_id": "PAT_DETERMINISTIC_LOCKSTEP",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Lockstep requires custom networking\n// Override default replication with input-only sync\nclass FLockstepNetDriver : public UIpNetDriver {\n    virtual void TickFlush(float DeltaSeconds) override {\n        // Only send player inputs, not state\n        BroadcastInputs(CurrentTick);\n        // Wait for all inputs before advancing\n        if (HasAllInputs(CurrentTick)) {\n            DeterministicSimulate(CurrentTick);\n            CurrentTick++;\n        }\n    }\n};",
+    "notes": "UE5 is NOT deterministic by default (PhysX, floating point). Lockstep requires replacing physics with a deterministic solver. Consider Chaos physics deterministic mode."
+  },
+  {
+    "pattern_id": "PAT_DETERMINISTIC_LOCKSTEP",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Manual lockstep implementation\nvar input_buffer: Dictionary = {} # {tick: {peer_id: input}}\nvar current_tick: int = 0\n\nfunc _physics_process(delta):\n    if has_all_inputs(current_tick):\n        for peer_id in input_buffer[current_tick]:\n            simulate_player(peer_id, input_buffer[current_tick][peer_id])\n        current_tick += 1\n    else:\n        # Wait â€” input delay\n        pass\n\nfunc send_input(input: Dictionary):\n    broadcast_input.rpc(multiplayer.get_unique_id(), current_tick, input)",
+    "notes": "Godot's physics (Godot Physics and Jolt) are not guaranteed deterministic. For lockstep, use fixed-point math and avoid engine physics."
+  },
+  {
+    "pattern_id": "PAT_DEAD_RECKONING",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Dead reckoning: predict position from velocity\npublic class DeadReckoning : NetworkBehaviour {\n    [SyncVar] Vector3 lastServerPos;\n    [SyncVar] Vector3 lastServerVel;\n    private Vector3 predictedPos;\n\n    void Update() {\n        if (!isLocalPlayer) {\n            // Predict based on last known velocity\n            predictedPos += lastServerVel * Time.deltaTime;\n            // Blend toward prediction\n            transform.position = Vector3.Lerp(\n                transform.position, predictedPos, 0.1f);\n        }\n    }\n}",
+    "notes": "Mirror SyncVar updates trigger correction. Dead reckoning is most useful for distant entities where snapshot interpolation adds too much latency."
+  },
+  {
+    "pattern_id": "PAT_DEAD_RECKONING",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Built-in dead reckoning via FRepMovement\n// CharacterMovementComponent uses this automatically\n// For custom actors:\nvoid AMyActor::Tick(float DeltaTime) {\n    if (!HasAuthority()) {\n        // Predict from replicated velocity\n        FVector Predicted = ReplicatedLocation + \n            ReplicatedVelocity * DeltaTime;\n        SetActorLocation(FMath::VInterpTo(\n            GetActorLocation(), Predicted, DeltaTime, 5.f));\n    }\n}",
+    "notes": "UE5's FRepMovement includes velocity for automatic dead reckoning. SimulatedProxy mode handles this for Characters automatically."
+  },
+  {
+    "pattern_id": "PAT_DEAD_RECKONING",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Manual dead reckoning\nvar last_known_pos: Vector3\nvar last_known_vel: Vector3\nvar predicted_pos: Vector3\n\nfunc _process(delta):\n    if not is_multiplayer_authority():\n        predicted_pos += last_known_vel * delta\n        global_position = global_position.lerp(predicted_pos, 0.1)\n\n@rpc(\"authority\", \"unreliable\")\nfunc sync_state(pos: Vector3, vel: Vector3):\n    last_known_pos = pos\n    last_known_vel = vel\n    predicted_pos = pos  # Reset prediction on new data",
+    "notes": "Godot MultiplayerSynchronizer can handle basic position replication. Dead reckoning is manual â€” add velocity to synced properties for prediction."
+  },
+  {
+    "pattern_id": "PAT_ENTITY_INTERPOLATION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Mirror: NetworkTransform handles interpolation\n// Custom implementation:\npublic class EntityInterp : NetworkBehaviour {\n    Queue<(float time, Vector3 pos)> buffer = new();\n    float delay = 0.1f;\n\n    void Update() {\n        if (isLocalPlayer) return;\n        float renderTime = (float)NetworkTime.time - delay;\n        // Find two snapshots to interpolate between\n        while (buffer.Count > 2 && buffer.Peek().time < renderTime)\n            buffer.Dequeue();\n        if (buffer.Count >= 2) {\n            // Lerp between oldest two\n        }\n    }\n}",
+    "notes": "Mirror NetworkTransform v2 uses double-buffer interpolation. Set sendRate and interpolation settings in the component inspector."
+  },
+  {
+    "pattern_id": "PAT_ENTITY_INTERPOLATION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Automatic for SimulatedProxy actors\n// FRepMovement handles interpolation\n// Custom:\nvoid AMyActor::SmoothNetUpdateFrequency(float DeltaTime) {\n    // UE5 interpolates between ServerLastTransform\n    // and current replicated transform automatically\n    // Tuning: NetUpdateFrequency, MinNetUpdateFrequency\n    AActor::NetUpdateFrequency = 30.f;\n}",
+    "notes": "UE5 handles entity interpolation automatically for SimulatedProxy role. Tune NetUpdateFrequency (default 100Hz) and interpolation speed."
+  },
+  {
+    "pattern_id": "PAT_ENTITY_INTERPOLATION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot 4: Buffer-based interpolation\nvar snapshot_buffer: Array = []\nvar INTERP_DELAY = 0.1 # seconds\n\nfunc receive_snapshot(pos: Vector3, timestamp: float):\n    snapshot_buffer.append({\"pos\": pos, \"time\": timestamp})\n    while snapshot_buffer.size() > 10:\n        snapshot_buffer.pop_front()\n\nfunc _process(delta):\n    var render_time = Time.get_ticks_msec() / 1000.0 - INTERP_DELAY\n    for i in range(snapshot_buffer.size() - 1):\n        var a = snapshot_buffer[i]\n        var b = snapshot_buffer[i + 1]\n        if a.time <= render_time and b.time >= render_time:\n            var t = (render_time - a.time) / (b.time - a.time)\n            global_position = a.pos.lerp(b.pos, t)\n            break",
+    "notes": "MultiplayerSynchronizer handles basic interpolation. Manual buffer gives finer control over interpolation delay and jitter handling."
+  },
+  {
+    "pattern_id": "PAT_INTEREST_MANAGEMENT",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Mirror: Use Interest Management components\n// SpatialHashInterestManagement or custom\npublic class CustomInterest : InterestManagement {\n    public float visRange = 50f;\n    public override bool OnCheckObserver(\n        NetworkIdentity identity, NetworkConnectionToClient conn) {\n        var playerPos = conn.identity.transform.position;\n        return Vector3.Distance(identity.transform.position, \n            playerPos) < visRange;\n    }\n    public override void OnRebuildObservers(\n        NetworkIdentity identity,\n        HashSet<NetworkConnectionToClient> observers) {\n        foreach (var conn in NetworkServer.connections.Values)\n            if (OnCheckObserver(identity, conn))\n                observers.Add(conn);\n    }\n}",
+    "notes": "Mirror provides SpatialHashInterestManagement and DistanceInterestManagement out of the box. Override for custom AOI logic."
+  },
+  {
+    "pattern_id": "PAT_INTEREST_MANAGEMENT",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Built-in relevancy system\nbool AActor::IsNetRelevantFor(\n    const AActor* RealViewer,\n    const AActor* ViewTarget,\n    const FVector& SrcLocation) const {\n    // Default: distance-based\n    float DistSq = (GetActorLocation() - SrcLocation).SizeSquared();\n    return DistSq < NetCullDistanceSquared;\n}\n// Override per-actor class for custom relevancy",
+    "notes": "UE5's NetCullDistanceSquared and IsNetRelevantFor() handle interest management. Use NetPriority for bandwidth allocation within relevant set."
+  },
+  {
+    "pattern_id": "PAT_INTEREST_MANAGEMENT",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot 4: Manual visibility/interest check\nvar visibility_range = 50.0\n\nfunc get_visible_peers(player_pos: Vector3) -> Array[int]:\n    var visible = []\n    for entity in get_tree().get_nodes_in_group(\"networked\"):\n        if entity.global_position.distance_to(player_pos) < visibility_range:\n            visible.append(entity.get_multiplayer_authority())\n    return visible\n\n# Only sync to visible peers:\nfunc broadcast_state():\n    for peer in get_visible_peers(global_position):\n        sync_state.rpc_id(peer, global_position, velocity)",
+    "notes": "Godot has no built-in interest management. Implement distance checks manually and use rpc_id() to send only to relevant peers."
+  },
+  {
+    "pattern_id": "PAT_DELTA_COMPRESSION",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Delta compression: send only changed fields\npublic struct NetState {\n    public Vector3 position;\n    public float health;\n    public int ammo;\n}\n\nbyte[] EncodeDelta(NetState prev, NetState curr) {\n    var writer = new NetworkWriter();\n    byte mask = 0;\n    if (prev.position != curr.position) { mask |= 1; writer.Write(curr.position); }\n    if (prev.health != curr.health) { mask |= 2; writer.Write(curr.health); }\n    if (prev.ammo != curr.ammo) { mask |= 4; writer.Write(curr.ammo); }\n    return PrependMask(mask, writer);\n}",
+    "notes": "Mirror handles basic delta compression internally for SyncVars (only sends changed fields). Custom delta compression needed for high-frequency data."
+  },
+  {
+    "pattern_id": "PAT_DELTA_COMPRESSION",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5: Built-in property-level delta compression\n// DOREPLIFETIME with conditions:\nDOREPLIFETIME_CONDITION(AMyActor, Health,\n    COND_OwnerOnly);  // Only to owner\nDOREPLIFETIME_CONDITION(AMyActor, Ammo,\n    COND_OwnerOnly);\n// UE5 automatically tracks dirty properties\n// and only sends changed ones per-tick",
+    "notes": "UE5's property replication system handles delta compression automatically. DOREPLIFETIME_CONDITION adds conditional replication to reduce bandwidth further."
+  },
+  {
+    "pattern_id": "PAT_DELTA_COMPRESSION",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot: Manual delta compression\nvar last_sent_state: Dictionary = {}\n\nfunc send_delta_state():\n    var current = get_current_state()\n    var delta = {}\n    for key in current:\n        if not last_sent_state.has(key) or last_sent_state[key] != current[key]:\n            delta[key] = current[key]\n    if delta.size() > 0:\n        apply_delta.rpc(delta)\n        last_sent_state = current.duplicate()\n\n@rpc(\"authority\", \"unreliable\")\nfunc apply_delta(delta: Dictionary):\n    for key in delta:\n        set(key, delta[key])",
+    "notes": "Godot MultiplayerSynchronizer sends full property values. Manual delta encoding needed for bandwidth optimization."
+  },
+  {
+    "pattern_id": "PAT_UTILITY_AI",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class UtilityAction {\n    public string Name;\n    public Func<float> ScoreFunc;\n    public Action Execute;\n}\npublic class UtilityAI : MonoBehaviour {\n    List<UtilityAction> actions = new();\n    void Update() {\n        var best = actions.OrderByDescending(a => a.ScoreFunc()).First();\n        best.Execute();\n    }\n}",
+    "notes": "Score functions return 0-1 normalized values. Use AnimationCurve for response curves. Consider inertia to prevent rapid switching."
+  },
+  {
+    "pattern_id": "PAT_UTILITY_AI",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 EQS (Environment Query System) for utility-based decisions\n// Create EQS query in editor with test items and scoring\nFEnvQueryRequest Request(EQSQuery);\nRequest.Execute(EEnvQueryRunMode::SingleBestItem, this,\n    &AMyAI::OnQueryFinished);\nvoid AMyAI::OnQueryFinished(TSharedPtr<FEnvQueryResult> Result) {\n    AActor* BestTarget = Result->GetItemAsActor(0);\n}",
+    "notes": "UE5 EQS is a built-in utility system. Combine with BT via EQS Query node. Test types: Distance, Trace, Dot, Pathfinding."
+  },
+  {
+    "pattern_id": "PAT_UTILITY_AI",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "class_name UtilityAI extends Node\nvar actions: Array[Dictionary] = []\nfunc add_action(name: String, score_fn: Callable, exec_fn: Callable):\n    actions.append({name=name, score=score_fn, execute=exec_fn})\nfunc evaluate() -> Dictionary:\n    var best = null\n    var best_score = -1.0\n    for action in actions:\n        var s = action.score.call()\n        if s > best_score:\n            best_score = s\n            best = action\n    return best",
+    "notes": "Use Callable for score/execute functions. Curve resource for response curves. Consider action cooldowns."
+  },
+  {
+    "pattern_id": "PAT_GOAP",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class GOAPAction {\n    public string Name;\n    public Dictionary<string, bool> Preconditions;\n    public Dictionary<string, bool> Effects;\n    public float Cost;\n}\npublic class GOAPPlanner {\n    public List<GOAPAction> Plan(Dictionary<string, bool> worldState,\n        Dictionary<string, bool> goal, List<GOAPAction> available) {\n        // A* search through action space\n        // Find cheapest action sequence from worldState to goal\n        return FindPlan(worldState, goal, available);\n    }\n}",
+    "notes": "Reference GOAP implementation from F.E.A.R. GDC talk. Cache plans when world state unchanged. Use A* over action graph."
+  },
+  {
+    "pattern_id": "PAT_GOAP",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// GOAP via custom planner + BT execution\nstruct FGOAPAction {\n    FName Name;\n    TMap<FName, bool> Preconditions;\n    TMap<FName, bool> Effects;\n    float Cost;\n};\n// Plan execution: convert plan to BT sequence at runtime\n// Each GOAPAction maps to a BTTask",
+    "notes": "UE5 has no built-in GOAP. Implement custom planner or use plugins. Execute plans through BT dynamic subtrees."
+  },
+  {
+    "pattern_id": "PAT_GOAP",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "class_name GOAPPlanner\nfunc plan(world_state: Dictionary, goal: Dictionary,\n    actions: Array[GOAPAction]) -> Array[GOAPAction]:\n    # A* search: each node is a world state\n    # Neighbors = actions whose preconditions are met\n    # Goal test = goal state satisfied\n    var open = [{ state=world_state, plan=[], cost=0.0 }]\n    while open.size() > 0:\n        var current = open.pop_front()\n        if _goal_met(current.state, goal): return current.plan\n        for action in actions:\n            if _preconditions_met(current.state, action):\n                var new_state = _apply_effects(current.state, action)\n                open.append({ state=new_state, plan=current.plan + [action], cost=current.cost + action.cost })\n    return []",
+    "notes": "Dictionary-based world state. Sort open list by cost for optimal plans. Cache plans when world state hash unchanged."
+  },
+  {
+    "pattern_id": "PAT_BLACKBOARD",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class Blackboard {\n    Dictionary<string, object> data = new();\n    public void Set<T>(string key, T value) => data[key] = value;\n    public T Get<T>(string key, T fallback = default) =>\n        data.TryGetValue(key, out var val) ? (T)val : fallback;\n    public bool Has(string key) => data.ContainsKey(key);\n    public void Clear(string key) => data.Remove(key);\n}",
+    "notes": "Type-safe wrappers via generics. Consider event notifications on value change. Clear stale entries on state transitions."
+  },
+  {
+    "pattern_id": "PAT_BLACKBOARD",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 built-in BlackboardComponent\n// In BT Task:\nUBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();\nBB->SetValueAsObject(FName(\"Target\"), TargetActor);\nBB->SetValueAsFloat(FName(\"Distance\"), Dist);\nAActor* Target = Cast<AActor>(BB->GetValueAsObject(FName(\"Target\")));\n// Decorators can observe BB key changes",
+    "notes": "UE5 BlackboardComponent is tightly integrated with BT. Use BB decorators to react to value changes. Define keys in BlackboardData asset."
+  },
+  {
+    "pattern_id": "PAT_BLACKBOARD",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "class_name Blackboard extends RefCounted\nvar _data: Dictionary = {}\nsignal value_changed(key: String, value: Variant)\nfunc set_value(key: String, value: Variant) -> void:\n    _data[key] = value\n    value_changed.emit(key, value)\nfunc get_value(key: String, fallback: Variant = null) -> Variant:\n    return _data.get(key, fallback)\nfunc has_key(key: String) -> bool:\n    return _data.has(key)",
+    "notes": "Signal-based notifications for reactive BT decorators. RefCounted for shared ownership. Dictionary backend."
+  },
+  {
+    "pattern_id": "PAT_STEERING_BEHAVIORS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public static Vector3 Seek(Vector3 pos, Vector3 target, float maxSpeed) {\n    Vector3 desired = (target - pos).normalized * maxSpeed;\n    return desired;\n}\npublic static Vector3 Flee(Vector3 pos, Vector3 threat, float maxSpeed) {\n    return -Seek(pos, threat, maxSpeed);\n}\npublic static Vector3 Arrive(Vector3 pos, Vector3 target, float maxSpeed, float slowRadius) {\n    float dist = Vector3.Distance(pos, target);\n    float speed = dist < slowRadius ? maxSpeed * (dist / slowRadius) : maxSpeed;\n    return (target - pos).normalized * speed;\n}",
+    "notes": "Combine behaviors with weighted sum or priority. Use Reynolds flocking (separation + alignment + cohesion) for groups."
+  },
+  {
+    "pattern_id": "PAT_STEERING_BEHAVIORS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "FVector Seek(FVector Pos, FVector Target, float MaxSpeed) {\n    FVector Desired = (Target - Pos).GetSafeNormal() * MaxSpeed;\n    return Desired;\n}\n// UE5: Use AIMoveTo for high-level, steering for local avoidance\nUAIBlueprintHelperLibrary::SimpleMoveToLocation(Controller, Target);",
+    "notes": "UE5 navigation handles most steering via NavMesh. Use custom steering for local obstacle avoidance and flocking."
+  },
+  {
+    "pattern_id": "PAT_STEERING_BEHAVIORS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "func seek(pos: Vector3, target: Vector3, max_speed: float) -> Vector3:\n    return (target - pos).normalized() * max_speed\nfunc flee(pos: Vector3, threat: Vector3, max_speed: float) -> Vector3:\n    return (pos - threat).normalized() * max_speed\nfunc arrive(pos: Vector3, target: Vector3, max_speed: float, slow_radius: float) -> Vector3:\n    var dist = pos.distance_to(target)\n    var speed = min(max_speed, max_speed * dist / slow_radius)\n    return (target - pos).normalized() * speed",
+    "notes": "Combine with NavigationAgent3D for pathfollowing + local steering. Use CharacterBody3D.velocity for applying forces."
+  },
+  {
+    "pattern_id": "PAT_PATHFINDING_ASTAR",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity built-in NavMesh pathfinding\nusing UnityEngine.AI;\nNavMeshAgent agent = GetComponent<NavMeshAgent>();\nagent.SetDestination(targetPosition);\n// Manual A* for grid:\nvar path = AStarGrid.FindPath(start, end, grid, heuristic);",
+    "notes": "Use NavMesh for 3D navigation. For grid/tile games, implement A* manually or use AStar2D/AStar3D. NavMeshAgent handles path smoothing."
+  },
+  {
+    "pattern_id": "PAT_PATHFINDING_ASTAR",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 built-in pathfinding via NavigationSystem\nUNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());\nFPathFindingQuery Query(this, *NavSys->GetDefaultNavDataInstance(), Start, End);\nFPathFindingResult Result = NavSys->FindPathSync(Query);",
+    "notes": "UE5 NavigationSystem uses navmesh internally. Use EQS for smarter path selection. RecastNavMesh for runtime updates."
+  },
+  {
+    "pattern_id": "PAT_PATHFINDING_ASTAR",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot built-in A* classes\nvar astar = AStar3D.new()\nastar.add_point(0, Vector3(0, 0, 0))\nastar.add_point(1, Vector3(10, 0, 0))\nastar.connect_points(0, 1)\nvar path = astar.get_point_path(0, 1)\n# Or use NavigationAgent3D for navmesh:\n$NavigationAgent3D.target_position = target\nvar next = $NavigationAgent3D.get_next_path_position()",
+    "notes": "Godot provides AStar2D/AStar3D for graph search and NavigationAgent3D/NavigationMesh for navmesh pathfinding."
+  },
+  {
+    "pattern_id": "PAT_NAVMESH",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Unity NavMesh baking and usage\n// 1. Mark geometry as Navigation Static\n// 2. Window > AI > Navigation > Bake\nNavMeshAgent agent = GetComponent<NavMeshAgent>();\nagent.speed = 3.5f;\nagent.SetDestination(target.position);\n// Runtime obstacles:\nNavMeshObstacle obstacle = GetComponent<NavMeshObstacle>();\nobstacle.carving = true;",
+    "notes": "Bake navmesh in editor or at runtime with NavMeshSurface. NavMeshObstacle for dynamic obstacles. NavMeshLink for jumps/drops."
+  },
+  {
+    "pattern_id": "PAT_NAVMESH",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 RecastNavMesh\n// 1. Add NavMeshBoundsVolume to level\n// 2. Build navigation (P key in editor)\n// AIController movement:\nMoveToLocation(TargetLocation, AcceptanceRadius);\n// Dynamic updates:\nUNavigationSystemV1::GetCurrent(World)->UpdateNavOctreeAll(Actor);",
+    "notes": "UE5 uses Recast/Detour internally. Nav mesh updates dynamically for movable geometry. Use Nav Modifiers for area costs."
+  },
+  {
+    "pattern_id": "PAT_NAVMESH",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Godot NavigationMesh setup\n# 1. Add NavigationRegion3D node\n# 2. Create NavigationMesh resource and bake\nvar agent = $NavigationAgent3D\nagent.target_position = target_pos\nvar next_pos = agent.get_next_path_position()\nvelocity = (next_pos - global_position).normalized() * speed\nmove_and_slide()",
+    "notes": "Godot 4 navigation is server-based. NavigationRegion3D for baked meshes. NavigationAgent3D for per-agent pathfinding with avoidance."
+  },
+  {
+    "pattern_id": "PAT_AI_DIRECTOR",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class AIDirector : MonoBehaviour {\n    float intensity = 0.5f; // 0=calm, 1=peak\n    float peakTimer, restTimer;\n    void Update() {\n        float stress = CalculatePlayerStress();\n        if (stress > 0.8f) { peakTimer += Time.deltaTime; restTimer = 0; }\n        else { restTimer += Time.deltaTime; peakTimer = 0; }\n        if (peakTimer > 30f) intensity -= Time.deltaTime * 0.1f; // force rest\n        if (restTimer > 20f) intensity += Time.deltaTime * 0.05f; // ramp up\n        AdjustSpawns(intensity);\n    }\n}",
+    "notes": "Track player health, ammo, time since last death, combat encounters. Use rolling averages to smooth input. L4D GDC talk is the reference."
+  },
+  {
+    "pattern_id": "PAT_AI_DIRECTOR",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// UE5 AI Director via GameMode or Subsystem\nvoid UDirectorSubsystem::Tick(float DeltaTime) {\n    float Stress = CalcPlayerStress();\n    Intensity = FMath::FInterpTo(Intensity, TargetIntensity, DeltaTime, 0.5f);\n    if (Stress > PeakThreshold) PeakDuration += DeltaTime;\n    else RestDuration += DeltaTime;\n    AdjustEncounters(Intensity);\n}",
+    "notes": "Implement as WorldSubsystem for global access. Use data tables for intensity-to-spawn mappings. Expose tuning in editor."
+  },
+  {
+    "pattern_id": "PAT_AI_DIRECTOR",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "class_name AIDirector extends Node\nvar intensity: float = 0.5\nvar peak_timer: float = 0.0\nvar rest_timer: float = 0.0\nfunc _process(delta):\n    var stress = _calc_player_stress()\n    if stress > 0.8:\n        peak_timer += delta; rest_timer = 0\n    else:\n        rest_timer += delta; peak_timer = 0\n    if peak_timer > 30: intensity = move_toward(intensity, 0.2, delta * 0.1)\n    if rest_timer > 20: intensity = move_toward(intensity, 0.8, delta * 0.05)\n    _adjust_spawns(intensity)",
+    "notes": "Autoload singleton for global access. Signal-based spawn adjustments. Export intensity curve for designer tuning."
+  },
+  {
+    "pattern_id": "PAT_GENRE_PLATFORMER",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Coyote time + jump buffer\nprivate float coyoteTimeCounter;\nprivate float jumpBufferCounter;\n[SerializeField] float coyoteTime = 0.12f;\n[SerializeField] float jumpBuffer = 0.1f;\n[SerializeField] float jumpForce = 12f;\nvoid Update() {\n    if (isGrounded) coyoteTimeCounter = coyoteTime;\n    else coyoteTimeCounter -= Time.deltaTime;\n    if (Input.GetButtonDown(\"Jump\")) jumpBufferCounter = jumpBuffer;\n    else jumpBufferCounter -= Time.deltaTime;\n    if (coyoteTimeCounter > 0 && jumpBufferCounter > 0) {\n        rb.velocity = new Vector2(rb.velocity.x, jumpForce);\n        coyoteTimeCounter = 0; jumpBufferCounter = 0;\n    }\n    // Variable jump height\n    if (Input.GetButtonUp(\"Jump\") && rb.velocity.y > 0)\n        rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);\n}",
+    "notes": "Attach to player CharacterController. Adjust coyoteTime (0.08-0.15s) and jumpBuffer (0.08-0.12s) for feel."
+  },
+  {
+    "pattern_id": "PAT_GENRE_PLATFORMER",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Coyote time + jump buffer\nvar coyote_counter: float = 0.0\nvar jump_buffer: float = 0.0\n@export var coyote_time: float = 0.12\n@export var jump_buffer_time: float = 0.1\n@export var jump_force: float = -400.0\nfunc _physics_process(delta):\n    if is_on_floor():\n        coyote_counter = coyote_time\n    else:\n        coyote_counter -= delta\n    if Input.is_action_just_pressed(\"jump\"):\n        jump_buffer = jump_buffer_time\n    else:\n        jump_buffer -= delta\n    if coyote_counter > 0 and jump_buffer > 0:\n        velocity.y = jump_force\n        coyote_counter = 0; jump_buffer = 0\n    if Input.is_action_just_released(\"jump\") and velocity.y < 0:\n        velocity.y *= 0.5\n    move_and_slide()",
+    "notes": "Extends CharacterBody2D. Godot uses negative Y for up. Tune coyote_time for snappy vs forgiving feel."
+  },
+  {
+    "pattern_id": "PAT_GENRE_PLATFORMER",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// CoyoteJumpComponent.h\nUPROPERTY(EditAnywhere) float CoyoteTime = 0.12f;\nUPROPERTY(EditAnywhere) float JumpBufferTime = 0.1f;\nfloat CoyoteCounter = 0; float JumpBufferCounter = 0;\nvoid TickComponent(float DeltaTime, ...) {\n    auto* MC = Cast<UCharacterMovementComponent>(GetOwner()->GetComponentByClass(UCharacterMovementComponent::StaticClass()));\n    if (MC && MC->IsMovingOnGround()) CoyoteCounter = CoyoteTime;\n    else CoyoteCounter -= DeltaTime;\n    if (bJumpPressed) { JumpBufferCounter = JumpBufferTime; bJumpPressed = false; }\n    else JumpBufferCounter -= DeltaTime;\n    if (CoyoteCounter > 0 && JumpBufferCounter > 0) {\n        Cast<ACharacter>(GetOwner())->Jump();\n        CoyoteCounter = 0; JumpBufferCounter = 0;\n    }\n}",
+    "notes": "ActorComponent attached to Character BP. Bind bJumpPressed to Enhanced Input action. Adjust LaunchVelocity for jump height."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RPG_TURNBASED",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Turn queue state machine\npublic class TurnManager : MonoBehaviour {\n    Queue<ICombatant> turnQueue = new();\n    ICombatant current;\n    public void StartBattle(List<ICombatant> combatants) {\n        var sorted = combatants.OrderByDescending(c => c.Speed).ToList();\n        foreach (var c in sorted) turnQueue.Enqueue(c);\n        NextTurn();\n    }\n    void NextTurn() {\n        if (turnQueue.Count == 0) { EndBattle(); return; }\n        current = turnQueue.Dequeue();\n        current.OnTurnStart(this);\n    }\n    public void EndCurrentTurn() {\n        if (!current.IsDead) turnQueue.Enqueue(current);\n        NextTurn();\n    }\n}",
+    "notes": "ICombatant interface: Speed, IsDead, OnTurnStart(). For ATB systems, use a priority queue with cooldown timers instead."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RPG_TURNBASED",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Turn queue state machine\nclass_name TurnManager extends Node\nvar turn_queue: Array[Combatant] = []\nvar current: Combatant = null\nfunc start_battle(combatants: Array[Combatant]):\n    turn_queue = combatants.duplicate()\n    turn_queue.sort_custom(func(a,b): return a.speed > b.speed)\n    next_turn()\nfunc next_turn():\n    if turn_queue.is_empty(): end_battle(); return\n    current = turn_queue.pop_front()\n    current.on_turn_start(self)\nfunc end_current_turn():\n    if not current.is_dead:\n        turn_queue.push_back(current)\n    next_turn()\nsignal battle_ended",
+    "notes": "Combatant class needs: speed, is_dead, on_turn_start(). Use signals for UI updates on turn change."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RPG_TURNBASED",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// TurnManager.h\nTArray<TScriptInterface<ICombatant>> TurnQueue;\nint32 CurrentIndex = 0;\nvoid StartBattle(TArray<TScriptInterface<ICombatant>> Combatants) {\n    TurnQueue = Combatants;\n    TurnQueue.Sort([](const auto& A, const auto& B) {\n        return A->GetSpeed() > B->GetSpeed();\n    });\n    NextTurn();\n}\nvoid NextTurn() {\n    TurnQueue.RemoveAll([](const auto& C) { return C->IsDead(); });\n    if (TurnQueue.Num() == 0) { OnBattleEnd.Broadcast(); return; }\n    CurrentIndex = CurrentIndex % TurnQueue.Num();\n    TurnQueue[CurrentIndex]->OnTurnStart(this);\n}\nvoid EndCurrentTurn() { CurrentIndex++; NextTurn(); }",
+    "notes": "ICombatant UInterface with GetSpeed(), IsDead(), OnTurnStart(). Use UMG widgets for action selection UI."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ACTION_RPG",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Equipment system\n[System.Serializable]\npublic class EquipSlot {\n    public string slotName; // weapon, armor, accessory\n    public ItemData equipped;\n    public void Equip(ItemData item, CharacterStats stats) {\n        if (equipped != null) Unequip(stats);\n        equipped = item;\n        foreach (var mod in item.statModifiers)\n            stats.AddModifier(mod);\n    }\n    public void Unequip(CharacterStats stats) {\n        if (equipped == null) return;\n        foreach (var mod in equipped.statModifiers)\n            stats.RemoveModifier(mod);\n        equipped = null;\n    }\n}",
+    "notes": "ItemData is a ScriptableObject with statModifiers list. CharacterStats uses a modifier stack (base + flat + percent)."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ACTION_RPG",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Equipment system\nclass_name EquipSlot extends Resource\n@export var slot_name: String\nvar equipped: ItemData = null\nfunc equip(item: ItemData, stats: CharacterStats):\n    if equipped: unequip(stats)\n    equipped = item\n    for mod in item.stat_modifiers:\n        stats.add_modifier(mod)\nfunc unequip(stats: CharacterStats):\n    if not equipped: return\n    for mod in equipped.stat_modifiers:\n        stats.remove_modifier(mod)\n    equipped = null",
+    "notes": "ItemData extends Resource with stat_modifiers array. CharacterStats tracks base + modifier stack."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ACTION_RPG",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// EquipmentComponent.h\nTMap<FName, UItemData*> EquippedSlots;\nvoid Equip(FName Slot, UItemData* Item) {\n    if (EquippedSlots.Contains(Slot)) Unequip(Slot);\n    EquippedSlots.Add(Slot, Item);\n    if (auto* ASC = GetOwner()->FindComponentByClass<UAbilitySystemComponent>()) {\n        for (auto& Mod : Item->GameplayEffects)\n            ASC->ApplyGameplayEffectToSelf(Mod.GetDefaultObject(), 1.0f, ASC->MakeEffectContext());\n    }\n}\nvoid Unequip(FName Slot) {\n    if (auto* Item = EquippedSlots.FindRef(Slot)) {\n        // Remove gameplay effects\n        EquippedSlots.Remove(Slot);\n    }\n}",
+    "notes": "Uses GAS (Gameplay Ability System) for stat modifications. ItemData is a UDataAsset with TArray<TSubclassOf<UGameplayEffect>>."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ROGUELITE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Run state persistence (meta-progression)\n[System.Serializable]\npublic class MetaProgression {\n    public int totalRuns;\n    public int currency;\n    public List<string> unlockedUpgrades = new();\n    public void OnRunEnd(int earnedCurrency, bool won) {\n        totalRuns++;\n        currency += earnedCurrency;\n        Save();\n    }\n    public void PurchaseUpgrade(string id, int cost) {\n        if (currency >= cost && !unlockedUpgrades.Contains(id)) {\n            currency -= cost;\n            unlockedUpgrades.Add(id);\n            Save();\n        }\n    }\n    void Save() => File.WriteAllText(savePath, JsonUtility.ToJson(this));\n    public static MetaProgression Load() =>\n        File.Exists(savePath) ? JsonUtility.FromJson<MetaProgression>(File.ReadAllText(savePath)) : new();\n}",
+    "notes": "Save meta-progression to persistent storage. Run-specific state resets on death; meta-state persists."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ROGUELITE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Run state persistence\nclass_name MetaProgression extends Resource\n@export var total_runs: int = 0\n@export var currency: int = 0\n@export var unlocked_upgrades: Array[String] = []\nfunc on_run_end(earned: int, _won: bool):\n    total_runs += 1\n    currency += earned\n    save()\nfunc purchase_upgrade(id: String, cost: int) -> bool:\n    if currency >= cost and id not in unlocked_upgrades:\n        currency -= cost\n        unlocked_upgrades.append(id)\n        save(); return true\n    return false\nfunc save():\n    ResourceSaver.save(self, \"user://meta_progression.tres\")\nstatic func load_or_new() -> MetaProgression:\n    if ResourceLoader.exists(\"user://meta_progression.tres\"):\n        return load(\"user://meta_progression.tres\")\n    return MetaProgression.new()",
+    "notes": "Saved as .tres resource in user://. Run state in a separate autoload that resets on death."
+  },
+  {
+    "pattern_id": "PAT_GENRE_ROGUELITE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// MetaProgressionSubsystem.h : UGameInstanceSubsystem\nUPROPERTY(SaveGame) int32 TotalRuns = 0;\nUPROPERTY(SaveGame) int32 Currency = 0;\nUPROPERTY(SaveGame) TArray<FName> UnlockedUpgrades;\nvoid OnRunEnd(int32 Earned, bool bWon) {\n    TotalRuns++; Currency += Earned;\n    UGameplayStatics::SaveGameToSlot(CreateSaveObject(), TEXT(\"Meta\"), 0);\n}\nbool PurchaseUpgrade(FName Id, int32 Cost) {\n    if (Currency >= Cost && !UnlockedUpgrades.Contains(Id)) {\n        Currency -= Cost; UnlockedUpgrades.Add(Id);\n        UGameplayStatics::SaveGameToSlot(CreateSaveObject(), TEXT(\"Meta\"), 0);\n        return true;\n    } return false;\n}",
+    "notes": "GameInstanceSubsystem persists across level loads. Use USaveGame for serialization."
+  },
+  {
+    "pattern_id": "PAT_GENRE_BATTLE_ROYALE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Zone shrink logic\npublic class ZoneManager : MonoBehaviour {\n    [SerializeField] float initialRadius = 500f;\n    [SerializeField] float shrinkDuration = 60f;\n    [SerializeField] float damagePerSec = 5f;\n    float currentRadius, targetRadius, shrinkTimer;\n    Vector3 center;\n    public void StartShrink(float newRadius, Vector3 newCenter) {\n        targetRadius = newRadius; center = newCenter;\n        shrinkTimer = shrinkDuration;\n    }\n    void Update() {\n        if (shrinkTimer > 0) {\n            shrinkTimer -= Time.deltaTime;\n            currentRadius = Mathf.Lerp(targetRadius, currentRadius, shrinkTimer / shrinkDuration);\n        }\n        foreach (var player in FindObjectsOfType<PlayerHealth>()) {\n            if (Vector3.Distance(player.transform.position, center) > currentRadius)\n                player.TakeDamage(damagePerSec * Time.deltaTime);\n        }\n    }\n}",
+    "notes": "Sync center and radius via network. Use phases array for multi-stage shrink. Minimap overlay shows zone."
+  },
+  {
+    "pattern_id": "PAT_GENRE_BATTLE_ROYALE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Zone shrink logic\nclass_name ZoneManager extends Node3D\n@export var initial_radius: float = 500.0\n@export var shrink_duration: float = 60.0\n@export var damage_per_sec: float = 5.0\nvar current_radius: float\nvar target_radius: float\nvar shrink_timer: float = 0.0\nvar center: Vector3\nfunc start_shrink(new_radius: float, new_center: Vector3):\n    target_radius = new_radius; center = new_center\n    shrink_timer = shrink_duration\nfunc _process(delta):\n    if shrink_timer > 0:\n        shrink_timer -= delta\n        current_radius = lerp(target_radius, current_radius, shrink_timer / shrink_duration)\n    for player in get_tree().get_nodes_in_group(\"players\"):\n        if player.global_position.distance_to(center) > current_radius:\n            player.take_damage(damage_per_sec * delta)",
+    "notes": "Multiplayer: server authoritative zone state, replicate via RPC. Use MeshInstance3D cylinder for visual."
+  },
+  {
+    "pattern_id": "PAT_GENRE_BATTLE_ROYALE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// ZoneManager.h : AActor, Replicated\nUPROPERTY(Replicated) float CurrentRadius;\nUPROPERTY(Replicated) FVector ZoneCenter;\nfloat TargetRadius; float ShrinkTimer;\nvoid StartShrink(float NewRadius, FVector NewCenter) {\n    TargetRadius = NewRadius; ZoneCenter = NewCenter;\n    ShrinkTimer = ShrinkDuration;\n}\nvoid Tick(float DeltaTime) {\n    if (ShrinkTimer > 0) {\n        ShrinkTimer -= DeltaTime;\n        CurrentRadius = FMath::Lerp(TargetRadius, CurrentRadius, ShrinkTimer / ShrinkDuration);\n    }\n    if (HasAuthority()) {\n        for (auto* PC : TActorRange<APlayerCharacter>(GetWorld())) {\n            if (FVector::Dist(PC->GetActorLocation(), ZoneCenter) > CurrentRadius)\n                PC->TakeDamage(DamagePerSec * DeltaTime, {}, nullptr, this);\n        }\n    }\n}",
+    "notes": "Server-authoritative: only HasAuthority() deals damage. Replicate CurrentRadius and ZoneCenter to clients for visual."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FIGHTING",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Command buffer input\npublic class InputBuffer {\n    struct BufferEntry { public string input; public float time; }\n    Queue<BufferEntry> buffer = new();\n    float bufferWindow = 0.15f;\n    public void RecordInput(string input) {\n        buffer.Enqueue(new BufferEntry { input = input, time = Time.time });\n    }\n    public bool ConsumeSequence(string[] sequence) {\n        CleanExpired();\n        var entries = buffer.ToArray();\n        int matchIdx = 0;\n        foreach (var e in entries) {\n            if (e.input == sequence[matchIdx]) matchIdx++;\n            if (matchIdx == sequence.Length) { buffer.Clear(); return true; }\n        }\n        return false;\n    }\n    void CleanExpired() {\n        while (buffer.Count > 0 && Time.time - buffer.Peek().time > bufferWindow)\n            buffer.Dequeue();\n    }\n}",
+    "notes": "Check ConsumeSequence each frame for special move detection. bufferWindow of 0.1-0.2s is typical."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FIGHTING",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Command buffer input\nclass_name InputBuffer extends Node\nvar buffer: Array[Dictionary] = []\n@export var buffer_window: float = 0.15\nfunc record_input(input_name: String):\n    buffer.append({\"input\": input_name, \"time\": Time.get_ticks_msec() / 1000.0})\nfunc consume_sequence(sequence: Array[String]) -> bool:\n    _clean_expired()\n    var match_idx = 0\n    for entry in buffer:\n        if entry.input == sequence[match_idx]: match_idx += 1\n        if match_idx == sequence.size():\n            buffer.clear(); return true\n    return false\nfunc _clean_expired():\n    var now = Time.get_ticks_msec() / 1000.0\n    buffer = buffer.filter(func(e): return now - e.time <= buffer_window)",
+    "notes": "Call record_input from _input(). Check consume_sequence in _physics_process for special moves."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FIGHTING",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// InputBufferComponent.h\nstruct FBufferEntry { FName Input; float Time; };\nTArray<FBufferEntry> Buffer;\nfloat BufferWindow = 0.15f;\nvoid RecordInput(FName Input) {\n    Buffer.Add({Input, GetWorld()->GetTimeSeconds()});\n}\nbool ConsumeSequence(const TArray<FName>& Sequence) {\n    CleanExpired();\n    int32 MatchIdx = 0;\n    for (auto& E : Buffer) {\n        if (E.Input == Sequence[MatchIdx]) MatchIdx++;\n        if (MatchIdx == Sequence.Num()) { Buffer.Empty(); return true; }\n    }\n    return false;\n}\nvoid CleanExpired() {\n    float Now = GetWorld()->GetTimeSeconds();\n    Buffer.RemoveAll([&](const FBufferEntry& E) { return Now - E.Time > BufferWindow; });\n}",
+    "notes": "ActorComponent. Enhanced Input actions feed RecordInput(). Define move sequences in a DataTable."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FPS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Hitscan with lag compensation\npublic class HitscanWeapon : NetworkBehaviour {\n    [SerializeField] float range = 100f;\n    [SerializeField] int damage = 25;\n    [Command]\n    void CmdFire(Vector3 origin, Vector3 direction, float clientTime) {\n        // Server rewinds hitboxes to clientTime for lag compensation\n        Physics.Raycast(origin, direction, out RaycastHit hit, range);\n        if (hit.collider && hit.collider.TryGetComponent<Health>(out var hp)) {\n            hp.TakeDamage(damage);\n            RpcShowImpact(hit.point, hit.normal);\n        }\n    }\n    [ClientRpc]\n    void RpcShowImpact(Vector3 point, Vector3 normal) {\n        Instantiate(impactFX, point, Quaternion.LookRotation(normal));\n    }\n}",
+    "notes": "Full lag compensation requires server-side hitbox rewinding. Use NetworkTime for clientTime. Mirror or Netcode for GameObjects."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FPS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Hitscan weapon\nextends Node3D\n@export var damage: int = 25\n@export var range: float = 100.0\n@rpc(\"any_peer\", \"call_local\", \"reliable\")\nfunc fire(origin: Vector3, direction: Vector3):\n    if not multiplayer.is_server(): return\n    var space = get_world_3d().direct_space_state\n    var query = PhysicsRayQueryParameters3D.create(origin, origin + direction * range)\n    var result = space.intersect_ray(query)\n    if result and result.collider.has_method(\"take_damage\"):\n        result.collider.take_damage(damage)\n        show_impact.rpc(result.position, result.normal)\n@rpc(\"authority\", \"call_local\", \"unreliable\")\nfunc show_impact(pos: Vector3, normal: Vector3):\n    var fx = impact_scene.instantiate()\n    add_child(fx); fx.global_position = pos",
+    "notes": "Server authoritative: only server processes hit detection. Clients send fire RPC with local aim data."
+  },
+  {
+    "pattern_id": "PAT_GENRE_FPS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// HitscanWeapon.cpp (Server)\nvoid AHitscanWeapon::ServerFire_Implementation(FVector Origin, FVector Dir) {\n    FHitResult Hit;\n    FCollisionQueryParams Params;\n    Params.AddIgnoredActor(GetOwner());\n    if (GetWorld()->LineTraceSingleByChannel(Hit, Origin, Origin + Dir * Range, ECC_Pawn, Params)) {\n        if (auto* HC = Hit.GetActor()->FindComponentByClass<UHealthComponent>()) {\n            HC->ApplyDamage(Damage, GetOwner());\n        }\n        MulticastShowImpact(Hit.ImpactPoint, Hit.ImpactNormal);\n    }\n}\nvoid AHitscanWeapon::MulticastShowImpact_Implementation(FVector Point, FVector Normal) {\n    UGameplayStatics::SpawnEmitterAtLocation(this, ImpactFX, Point, Normal.Rotation());\n}",
+    "notes": "Server RPC (ServerFire) ensures authority. MulticastShowImpact for all clients. Add lag compensation via rewinding."
+  },
+  {
+    "pattern_id": "PAT_GENRE_IDLE_CLICKER",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Offline progress calculation\npublic class OfflineProgress {\n    public static double Calculate(double ratePerSec, System.DateTime lastPlayed) {\n        var elapsed = (System.DateTime.UtcNow - lastPlayed).TotalSeconds;\n        elapsed = System.Math.Min(elapsed, 86400); // cap at 24h\n        return ratePerSec * elapsed * 0.5; // 50% efficiency offline\n    }\n    public static void ApplyOnLogin(GameState state) {\n        var earned = Calculate(state.currentRate, state.lastLogout);\n        state.currency += earned;\n        state.lastLogout = System.DateTime.UtcNow;\n        ShowOfflineRewardUI(earned);\n    }\n}",
+    "notes": "Cap offline time to prevent exploits. Efficiency multiplier < 1.0 incentivizes active play. Show reward popup on login."
+  },
+  {
+    "pattern_id": "PAT_GENRE_IDLE_CLICKER",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Offline progress\nclass_name OfflineProgress\nstatic func calculate(rate_per_sec: float, last_played_unix: float) -> float:\n    var elapsed = Time.get_unix_time_from_system() - last_played_unix\n    elapsed = min(elapsed, 86400.0) # cap 24h\n    return rate_per_sec * elapsed * 0.5 # 50% offline efficiency\nstatic func apply_on_login(state: GameState):\n    var earned = calculate(state.current_rate, state.last_logout)\n    state.currency += earned\n    state.last_logout = Time.get_unix_time_from_system()\n    return earned # show in UI",
+    "notes": "Store last_logout as Unix timestamp. Save state on _notification(NOTIFICATION_WM_CLOSE_REQUEST)."
+  },
+  {
+    "pattern_id": "PAT_GENRE_IDLE_CLICKER",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// OfflineProgressSubsystem.h\ndouble CalculateOfflineGains(double RatePerSec, FDateTime LastPlayed) {\n    FTimespan Elapsed = FDateTime::UtcNow() - LastPlayed;\n    double Secs = FMath::Min(Elapsed.GetTotalSeconds(), 86400.0);\n    return RatePerSec * Secs * 0.5;\n}\nvoid ApplyOnLogin(UGameState* State) {\n    double Earned = CalculateOfflineGains(State->CurrentRate, State->LastLogout);\n    State->Currency += Earned;\n    State->LastLogout = FDateTime::UtcNow();\n    OnOfflineReward.Broadcast(Earned);\n}",
+    "notes": "GameInstanceSubsystem for persistence. Broadcast delegate for UI popup. Cap at 24h to prevent exploits."
+  },
+  {
+    "pattern_id": "PAT_GENRE_TOWER_DEFENSE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Wave spawner\npublic class WaveSpawner : MonoBehaviour {\n    [System.Serializable] public class Wave {\n        public GameObject enemyPrefab;\n        public int count;\n        public float interval;\n    }\n    [SerializeField] Wave[] waves;\n    [SerializeField] Transform[] spawnPoints;\n    int currentWave = 0;\n    public IEnumerator SpawnWave() {\n        if (currentWave >= waves.Length) yield break;\n        var w = waves[currentWave];\n        for (int i = 0; i < w.count; i++) {\n            var sp = spawnPoints[i % spawnPoints.Length];\n            Instantiate(w.enemyPrefab, sp.position, sp.rotation);\n            yield return new WaitForSeconds(w.interval);\n        }\n        currentWave++;\n    }\n}",
+    "notes": "Trigger SpawnWave() on timer or player ready button. Scale wave count/interval for difficulty progression."
+  },
+  {
+    "pattern_id": "PAT_GENRE_TOWER_DEFENSE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Wave spawner\nclass_name WaveSpawner extends Node\n@export var waves: Array[WaveData] = []\n@export var spawn_points: Array[Marker3D] = []\nvar current_wave: int = 0\nfunc spawn_wave():\n    if current_wave >= waves.size(): return\n    var w = waves[current_wave]\n    for i in w.count:\n        var sp = spawn_points[i % spawn_points.size()]\n        var enemy = w.enemy_scene.instantiate()\n        add_child(enemy)\n        enemy.global_position = sp.global_position\n        await get_tree().create_timer(w.interval).timeout\n    current_wave += 1\n    wave_completed.emit(current_wave)\nsignal wave_completed(wave_num: int)",
+    "notes": "WaveData is a Resource with enemy_scene, count, interval. Use await for spawn timing."
+  },
+  {
+    "pattern_id": "PAT_GENRE_TOWER_DEFENSE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// WaveSpawner.h\nstruct FWaveData { TSubclassOf<AEnemy> EnemyClass; int32 Count; float Interval; };\nTArray<FWaveData> Waves;\nint32 CurrentWave = 0;\nvoid SpawnWave() {\n    if (CurrentWave >= Waves.Num()) return;\n    auto& W = Waves[CurrentWave];\n    SpawnIndex = 0; SpawnCount = W.Count;\n    GetWorldTimerManager().SetTimer(SpawnTimer, [this, &W]() {\n        auto* SP = SpawnPoints[SpawnIndex % SpawnPoints.Num()];\n        GetWorld()->SpawnActor<AEnemy>(W.EnemyClass, SP->GetActorLocation(), SP->GetActorRotation());\n        SpawnIndex++;\n        if (SpawnIndex >= SpawnCount) {\n            GetWorldTimerManager().ClearTimer(SpawnTimer);\n            CurrentWave++; OnWaveComplete.Broadcast(CurrentWave);\n        }\n    }, W.Interval, true);\n}",
+    "notes": "FWaveData in a DataTable for designer editing. Timer-based spawning avoids coroutines."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RTS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "// Resource tick system\npublic class ResourceManager : MonoBehaviour {\n    [SerializeField] float tickInterval = 1f;\n    Dictionary<string, float> resources = new() { [\"gold\"] = 100, [\"wood\"] = 50, [\"food\"] = 25 };\n    Dictionary<string, float> income = new();\n    void Start() => InvokeRepeating(nameof(Tick), tickInterval, tickInterval);\n    void Tick() {\n        foreach (var kvp in income)\n            resources[kvp.Key] = Mathf.Max(0, resources[kvp.Key] + kvp.Value);\n        OnResourcesChanged?.Invoke(resources);\n    }\n    public void RegisterIncome(string res, float amount) {\n        income[res] = income.GetValueOrDefault(res) + amount;\n    }\n    public bool Spend(string res, float amount) {\n        if (resources.GetValueOrDefault(res) < amount) return false;\n        resources[res] -= amount;\n        OnResourcesChanged?.Invoke(resources); return true;\n    }\n    public event System.Action<Dictionary<string, float>> OnResourcesChanged;\n}",
+    "notes": "Buildings call RegisterIncome on placement. Units call Spend on training. UI subscribes to OnResourcesChanged."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RTS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "# Resource tick system\nclass_name ResourceManager extends Node\nvar resources: Dictionary = {\"gold\": 100.0, \"wood\": 50.0, \"food\": 25.0}\nvar income: Dictionary = {}\n@export var tick_interval: float = 1.0\nfunc _ready():\n    var timer = Timer.new()\n    timer.wait_time = tick_interval; timer.autostart = true\n    timer.timeout.connect(_tick)\n    add_child(timer)\nfunc _tick():\n    for res in income:\n        resources[res] = max(0, resources.get(res, 0) + income[res])\n    resources_changed.emit(resources)\nfunc register_income(res: String, amount: float):\n    income[res] = income.get(res, 0) + amount\nfunc spend(res: String, amount: float) -> bool:\n    if resources.get(res, 0) < amount: return false\n    resources[res] -= amount\n    resources_changed.emit(resources); return true\nsignal resources_changed(resources: Dictionary)",
+    "notes": "Autoload singleton. Buildings register income on built, unregister on destroyed."
+  },
+  {
+    "pattern_id": "PAT_GENRE_RTS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// ResourceManagerSubsystem.h\nTMap<FName, float> Resources = {{\"Gold\", 100}, {\"Wood\", 50}, {\"Food\", 25}};\nTMap<FName, float> Income;\nFTimerHandle TickTimer;\nvoid Initialize(FSubsystemCollectionBase& Collection) {\n    GetWorld()->GetTimerManager().SetTimer(TickTimer, this, &ThisClass::Tick, 1.0f, true);\n}\nvoid Tick() {\n    for (auto& [Res, Amount] : Income)\n        Resources[Res] = FMath::Max(0.f, Resources[Res] + Amount);\n    OnResourcesChanged.Broadcast(Resources);\n}\nvoid RegisterIncome(FName Res, float Amount) { Income.FindOrAdd(Res) += Amount; }\nbool Spend(FName Res, float Amount) {\n    if (Resources.FindRef(Res) < Amount) return false;\n    Resources[Res] -= Amount; OnResourcesChanged.Broadcast(Resources); return true;\n}",
+    "notes": "WorldSubsystem for per-world resource state. Use multicast delegate for UI binding."
+  },
+  {
+    "pattern_id": "PAT_ECON_LIVE_OPS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class LiveOpsManager : MonoBehaviour {\n    public string activeEventId;\n    public System.DateTime eventEnd;\n    public void StartEvent(string id, float hours) { activeEventId = id; eventEnd = System.DateTime.UtcNow.AddHours(hours); }\n    public bool IsActive() => !string.IsNullOrEmpty(activeEventId) && System.DateTime.UtcNow < eventEnd;\n}",
+    "notes": "UTC event timing. Persist to server for MP sync."
+  },
+  {
+    "pattern_id": "PAT_ECON_LIVE_OPS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name LiveOpsManager\nvar active_event: String = \"\"\nvar event_end: float = 0.0\nfunc start_event(id: String, hours: float) -> void:\n    active_event = id\n    event_end = Time.get_unix_time_from_system() + hours * 3600.0\nfunc is_active() -> bool:\n    return active_event != \"\" and Time.get_unix_time_from_system() < event_end",
+    "notes": "Unix timestamps for offline-safe events."
+  },
+  {
+    "pattern_id": "PAT_ECON_LIVE_OPS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass ULiveOpsManager : public UGameInstanceSubsystem {\n    GENERATED_BODY()\n    UPROPERTY() FName ActiveEventId;\n    UPROPERTY() FDateTime EventEnd;\n    void StartEvent(FName Id, float Hours) { ActiveEventId = Id; EventEnd = FDateTime::UtcNow() + FTimespan::FromHours(Hours); }\n    bool IsActive() const { return !ActiveEventId.IsNone() && FDateTime::UtcNow() < EventEnd; }\n};",
+    "notes": "GameInstanceSubsystem for global live ops."
+  },
+  {
+    "pattern_id": "PAT_ECON_BATTLE_PASS",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class PassTracker : MonoBehaviour {\n    public int currentXP, currentTier;\n    public List<int> thresholds;\n    public void AddXP(int amt) {\n        currentXP += amt;\n        while (currentTier < thresholds.Count && currentXP >= thresholds[currentTier]) {\n            currentXP -= thresholds[currentTier]; currentTier++;\n        }\n    }\n}",
+    "notes": "Linear tier progression. Premium flag for bonus track."
+  },
+  {
+    "pattern_id": "PAT_ECON_BATTLE_PASS",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name PassTracker\nsignal tier_up(tier: int)\nvar current_xp: int = 0\nvar current_tier: int = 0\nvar thresholds: Array[int] = [100,200,350,500]\nfunc add_xp(amt: int) -> void:\n    current_xp += amt\n    while current_tier < thresholds.size() and current_xp >= thresholds[current_tier]:\n        current_xp -= thresholds[current_tier]\n        current_tier += 1\n        tier_up.emit(current_tier)",
+    "notes": "Signal on tier up for UI."
+  },
+  {
+    "pattern_id": "PAT_ECON_BATTLE_PASS",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UPassTracker : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY() int32 CurrentXP = 0, CurrentTier = 0;\n    UPROPERTY(EditAnywhere) TArray<int32> Thresholds;\n    void AddXP(int32 Amt) {\n        CurrentXP += Amt;\n        while (CurrentTier < Thresholds.Num() && CurrentXP >= Thresholds[CurrentTier]) {\n            CurrentXP -= Thresholds[CurrentTier]; CurrentTier++;\n        }\n    }\n};",
+    "notes": "DataTable thresholds."
+  },
+  {
+    "pattern_id": "PAT_ECON_ENERGY",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class EnergySystem : MonoBehaviour {\n    public int max = 100, current = 100;\n    public float regenSec = 300f;\n    private float lastRegen;\n    void OnEnable() { lastRegen = Time.realtimeSinceStartup; }\n    void Update() { if (current < max && Time.realtimeSinceStartup - lastRegen >= regenSec) { current++; lastRegen = Time.realtimeSinceStartup; } }\n    public bool Spend(int amt) { if (current < amt) return false; current -= amt; return true; }\n}",
+    "notes": "Real-time regen. Persist for offline."
+  },
+  {
+    "pattern_id": "PAT_ECON_ENERGY",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name EnergySystem\nvar max_energy: int = 100\nvar current: int = 100\nvar regen_sec: float = 300.0\nvar _last: float = 0.0\nfunc _ready(): _last = Time.get_unix_time_from_system()\nfunc _process(_d):\n    if current < max_energy and Time.get_unix_time_from_system() - _last >= regen_sec:\n        current = mini(current + 1, max_energy); _last = Time.get_unix_time_from_system()\nfunc spend(amt: int) -> bool:\n    if current < amt: return false\n    current -= amt; return true",
+    "notes": "Unix timestamps for offline regen."
+  },
+  {
+    "pattern_id": "PAT_ECON_ENERGY",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UEnergySystem : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY(EditAnywhere) int32 Max=100;\n    UPROPERTY() int32 Current=100;\n    UPROPERTY(EditAnywhere) float RegenSec=300.f;\n    double LastRegen=0;\n    void BeginPlay() override { Super::BeginPlay(); LastRegen=FPlatformTime::Seconds(); }\n    void TickComponent(float DT,ELevelTick,FActorComponentTickFunction*) override {\n        if(Current<Max&&FPlatformTime::Seconds()-LastRegen>=RegenSec){Current++;LastRegen=FPlatformTime::Seconds();}\n    }\n    bool Spend(int32 A){if(Current<A)return false;Current-=A;return true;}\n};",
+    "notes": "TickComponent regen."
+  },
+  {
+    "pattern_id": "PAT_ECON_CRAFTING",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class CraftingSystem : MonoBehaviour {\n    public bool CanCraft(List<ItemAmount> recipe, Inventory inv) {\n        foreach (var i in recipe) if (inv.GetCount(i.id) < i.count) return false;\n        return true;\n    }\n    public IEnumerator Craft(List<ItemAmount> recipe, string result, float time, Inventory inv) {\n        foreach (var i in recipe) inv.Remove(i.id, i.count);\n        yield return new WaitForSeconds(time);\n        inv.Add(result, 1);\n    }\n}",
+    "notes": "Deduct before wait to prevent duplication."
+  },
+  {
+    "pattern_id": "PAT_ECON_CRAFTING",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name CraftingSystem\nfunc can_craft(recipe: Array, inv: Inventory) -> bool:\n    for ing in recipe:\n        if inv.get_count(ing.id) < ing.count: return false\n    return true\nfunc craft(recipe: Array, result_id: String, time: float, inv: Inventory):\n    for ing in recipe: inv.remove(ing.id, ing.count)\n    await get_tree().create_timer(time).timeout\n    inv.add(result_id, 1)",
+    "notes": "Await timer. Deduct first."
+  },
+  {
+    "pattern_id": "PAT_ECON_CRAFTING",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UCraftingSystem : public UActorComponent {\n    GENERATED_BODY()\n    bool CanCraft(const TArray<FIngredient>& R, UInventory* Inv) {\n        for(auto& I:R) if(Inv->GetCount(I.ItemId)<I.Count) return false;\n        return true;\n    }\n};",
+    "notes": "USTRUCT recipes for DataTable."
+  },
+  {
+    "pattern_id": "PAT_ECON_UPGRADE_PATH",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class UpgradeManager : MonoBehaviour {\n    public List<int> costs = new(){100,250,500};\n    public int level = 0;\n    public float Mult => 1f + level * 0.2f;\n    public bool TryUpgrade(ref int currency) {\n        if (level >= costs.Count || currency < costs[level]) return false;\n        currency -= costs[level]; level++; return true;\n    }\n}",
+    "notes": "Escalating costs. Linear multiplier."
+  },
+  {
+    "pattern_id": "PAT_ECON_UPGRADE_PATH",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name UpgradeManager\nvar costs: Array[int] = [100,250,500]\nvar level: int = 0\nfunc get_mult() -> float: return 1.0 + level * 0.2\nfunc try_upgrade(wallet: Dictionary) -> bool:\n    if level >= costs.size() or wallet.gold < costs[level]: return false\n    wallet.gold -= costs[level]; level += 1; return true",
+    "notes": "Dictionary wallet."
+  },
+  {
+    "pattern_id": "PAT_ECON_UPGRADE_PATH",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UUpgradeManager : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY(EditAnywhere) TArray<int32> Costs;\n    UPROPERTY() int32 Level=0;\n    float GetMult() const{return 1.f+Level*0.2f;}\n    bool TryUpgrade(int32& C){if(Level>=Costs.Num()||C<Costs[Level])return false;C-=Costs[Level];Level++;return true;}\n};",
+    "notes": "DataTable costs."
+  },
+  {
+    "pattern_id": "PAT_ECON_REWARD_SCHEDULE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class RewardScheduler : MonoBehaviour {\n    [System.Serializable] public class Entry { public string id; public float weight; }\n    public List<Entry> table;\n    public string Roll() {\n        float total=0; foreach(var e in table) total+=e.weight;\n        float r=UnityEngine.Random.Range(0f,total),cum=0;\n        foreach(var e in table){cum+=e.weight;if(r<=cum)return e.id;}\n        return table[^1].id;\n    }\n}",
+    "notes": "Weighted random. Variable-ratio reinforcement."
+  },
+  {
+    "pattern_id": "PAT_ECON_REWARD_SCHEDULE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name RewardScheduler\nvar table: Array[Dictionary] = [{\"id\":\"common\",\"w\":70},{\"id\":\"rare\",\"w\":25},{\"id\":\"epic\",\"w\":5}]\nfunc roll() -> String:\n    var total := 0.0\n    for e in table: total += e.w\n    var r := randf() * total\n    var cum := 0.0\n    for e in table:\n        cum += e.w\n        if r <= cum: return e.id\n    return table[-1].id",
+    "notes": "Weighted loot table."
+  },
+  {
+    "pattern_id": "PAT_ECON_REWARD_SCHEDULE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass URewardScheduler : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY(EditAnywhere) TArray<FRewardEntry> Table;\n    FName Roll(){\n        float T=0;for(auto&E:Table)T+=E.Weight;\n        float R=FMath::FRandRange(0,T),C=0;\n        for(auto&E:Table){C+=E.Weight;if(R<=C)return E.RewardId;}\n        return Table.Last().RewardId;\n    }\n};",
+    "notes": "DataTable rewards."
+  },
+  {
+    "pattern_id": "PAT_ECON_TOKEN_SINK",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class TokenEconomy : MonoBehaviour {\n    public Dictionary<string,long> bal = new();\n    public long minted, sunk;\n    public void Mint(string t, long a) { bal.TryAdd(t,0); bal[t]+=a; minted+=a; }\n    public bool Sink(string t, long a) { if(!bal.ContainsKey(t)||bal[t]<a) return false; bal[t]-=a; sunk+=a; return true; }\n}",
+    "notes": "Faucet/sink inflation tracking."
+  },
+  {
+    "pattern_id": "PAT_ECON_TOKEN_SINK",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name TokenEconomy\nvar bal: Dictionary = {}\nvar minted: int = 0\nvar sunk: int = 0\nfunc mint(t: String, a: int):\n    if not bal.has(t): bal[t] = 0\n    bal[t] += a; minted += a\nfunc sink(t: String, a: int) -> bool:\n    if bal.get(t, 0) < a: return false\n    bal[t] -= a; sunk += a; return true",
+    "notes": "Multi-currency dictionary."
+  },
+  {
+    "pattern_id": "PAT_ECON_TOKEN_SINK",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UTokenEconomy : public UGameInstanceSubsystem {\n    GENERATED_BODY()\n    TMap<FName,int64> Bal;\n    int64 Minted=0,Sunk=0;\n    void Mint(FName T,int64 A){Bal.FindOrAdd(T)+=A;Minted+=A;}\n    bool Sink(FName T,int64 A){int64*B=Bal.Find(T);if(!B||*B<A)return false;*B-=A;Sunk+=A;return true;}\n};",
+    "notes": "GameInstanceSubsystem. FName tokens."
+  },
+  {
+    "pattern_id": "PAT_ECON_STOREFRONT",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class Storefront : MonoBehaviour {\n    [System.Serializable] public class Item { public string id; public int price, stock, bought; }\n    public List<Item> catalog;\n    public bool Buy(Item it, TokenEconomy w) {\n        if(it.stock>0&&it.bought>=it.stock) return false;\n        if(!w.Sink(\"gold\",it.price)) return false;\n        it.bought++; return true;\n    }\n    public void Refresh() { foreach(var i in catalog) i.bought=0; }\n}",
+    "notes": "Stock-limited with daily refresh."
+  },
+  {
+    "pattern_id": "PAT_ECON_STOREFRONT",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name Storefront\nvar catalog: Array[Dictionary] = []\nfunc buy(item: Dictionary, wallet: TokenEconomy) -> bool:\n    if item.get(\"stock\",0) > 0 and item.get(\"bought\",0) >= item.stock: return false\n    if not wallet.sink(\"gold\", item.price): return false\n    item.bought = item.get(\"bought\",0) + 1; return true\nfunc refresh():\n    for item in catalog: item.bought = 0",
+    "notes": "Dictionary catalog."
+  },
+  {
+    "pattern_id": "PAT_ECON_STOREFRONT",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UStorefront : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY(EditAnywhere) TArray<FStoreItem> Catalog;\n    bool Buy(FStoreItem& I,UTokenEconomy* W){if(I.Stock>0&&I.Bought>=I.Stock)return false;if(!W->Sink(I.Currency,I.Price))return false;I.Bought++;return true;}\n    void Refresh(){for(auto&I:Catalog)I.Bought=0;}\n};",
+    "notes": "DataTable catalog."
+  },
+  {
+    "pattern_id": "PAT_ECON_PRESTIGE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class PrestigeSystem : MonoBehaviour {\n    public int level; public float mult=1f;\n    public void Prestige(ref int score) { level++; mult=1f+level*0.1f; score=0; }\n    public float Apply(float v) => v*mult;\n}",
+    "notes": "Reset for permanent multiplier."
+  },
+  {
+    "pattern_id": "PAT_ECON_PRESTIGE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name PrestigeSystem\nvar level: int = 0\nvar mult: float = 1.0\nfunc prestige(data: Dictionary):\n    level += 1; mult = 1.0 + level * 0.1; data.score = 0\nfunc apply(v: float) -> float: return v * mult",
+    "notes": "Soft reset. Multiplier compounds."
+  },
+  {
+    "pattern_id": "PAT_ECON_PRESTIGE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UPrestigeSystem : public UActorComponent {\n    GENERATED_BODY()\n    UPROPERTY() int32 Level=0;\n    UPROPERTY() float Mult=1.f;\n    void Prestige(int32& Score){Level++;Mult=1.f+Level*0.1f;Score=0;}\n    float Apply(float V)const{return V*Mult;}\n};",
+    "notes": "Permanent multiplier."
+  },
+  {
+    "pattern_id": "PAT_ECON_TIME_GATE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class TimeGate : MonoBehaviour {\n    Dictionary<string,System.DateTime> gates=new();\n    public bool IsLocked(string id)=>gates.ContainsKey(id)&&System.DateTime.UtcNow<gates[id];\n    public void Start(string id,float sec){gates[id]=System.DateTime.UtcNow.AddSeconds(sec);}\n    public bool TryUnlock(string id){if(IsLocked(id))return false;gates.Remove(id);return true;}\n}",
+    "notes": "UTC timestamps. Offline-safe."
+  },
+  {
+    "pattern_id": "PAT_ECON_TIME_GATE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nclass_name TimeGate\nvar gates: Dictionary = {}\nfunc is_locked(id: String) -> bool:\n    return gates.has(id) and Time.get_unix_time_from_system() < gates[id]\nfunc start_gate(id: String, sec: float):\n    gates[id] = Time.get_unix_time_from_system() + sec\nfunc try_unlock(id: String) -> bool:\n    if is_locked(id): return false\n    gates.erase(id); return true",
+    "notes": "Unix timestamps."
+  },
+  {
+    "pattern_id": "PAT_ECON_TIME_GATE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass UTimeGate : public UActorComponent {\n    GENERATED_BODY()\n    TMap<FName,FDateTime> Gates;\n    bool IsLocked(FName Id)const{auto*U=Gates.Find(Id);return U&&FDateTime::UtcNow()<*U;}\n    void StartGate(FName Id,float Sec){Gates.Add(Id,FDateTime::UtcNow()+FTimespan::FromSeconds(Sec));}\n    bool TryUnlock(FName Id){if(IsLocked(Id))return false;Gates.Remove(Id);return true;}\n};",
+    "notes": "FDateTime UTC."
+  },
+  {
+    "pattern_id": "PAT_POOL_ALLOCATOR",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "public class Pool<T> where T : class, new() {\n    Stack<T> free = new();\n    public T Get() => free.Count > 0 ? free.Pop() : new T();\n    public void Return(T obj) { free.Push(obj); }\n    public void Prewarm(int n) { for (int i=0;i<n;i++) free.Push(new T()); }\n    public int FreeCount => free.Count;\n}",
+    "notes": "Generic pool avoids GC allocations during gameplay."
+  },
+  {
+    "pattern_id": "PAT_POOL_ALLOCATOR",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "template<typename T>\nclass TPool {\n    TArray<T*> Free;\npublic:\n    T* Acquire() { return Free.Num()>0 ? Free.Pop() : new T(); }\n    void Release(T* Obj) { Free.Push(Obj); }\n    void Prewarm(int32 N) { for(int32 i=0;i<N;i++) Free.Push(new T()); }\n    ~TPool() { for(auto* P:Free) delete P; }\n};",
+    "notes": "TArray-backed pool; use FMemory::Malloc for custom alignment needs."
+  },
+  {
+    "pattern_id": "PAT_POOL_ALLOCATOR",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends RefCounted\nclass_name Pool\nvar _scene: PackedScene\nvar _free: Array = []\nfunc _init(scene: PackedScene, prewarm: int = 0):\n    _scene = scene\n    for i in prewarm: _free.append(_scene.instantiate())\nfunc acquire() -> Node:\n    return _free.pop_back() if _free.size() > 0 else _scene.instantiate()\nfunc release(node: Node) -> void:\n    node.get_parent().remove_child(node); _free.append(node)",
+    "notes": "Scene-based pool; remove from tree on release to avoid processing."
+  },
+  {
+    "pattern_id": "PAT_THREAD_POOL",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using Unity.Jobs;\nusing Unity.Burst;\n[BurstCompile]\nstruct HeavyJob : IJobParallelFor {\n    public NativeArray<float> Data;\n    public void Execute(int i) { Data[i] = Mathf.Sqrt(Data[i]); }\n}\n// Schedule: new HeavyJob{Data=arr}.Schedule(arr.Length,64);",
+    "notes": "Unity Job System manages worker threads internally; use Burst for SIMD."
+  },
+  {
+    "pattern_id": "PAT_THREAD_POOL",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "void RunParallel(TArray<FVector>& Data) {\n    ParallelFor(Data.Num(), [&](int32 Idx) {\n        Data[Idx] = Data[Idx].GetSafeNormal();\n    });\n}",
+    "notes": "ParallelFor uses UE task graph worker threads automatically."
+  },
+  {
+    "pattern_id": "PAT_THREAD_POOL",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nvar thread: Thread\nfunc _ready():\n    thread = Thread.new()\n    thread.start(_heavy_work)\nfunc _heavy_work():\n    var result = 0.0\n    for i in 1000000: result += sqrt(float(i))\n    call_deferred(\"_on_complete\", result)\nfunc _on_complete(r): print(\"Done: \", r)\nfunc _exit_tree(): thread.wait_to_finish()",
+    "notes": "Godot Thread class; use call_deferred to return results to main thread."
+  },
+  {
+    "pattern_id": "PAT_LOCK_FREE_QUEUE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using System.Collections.Concurrent;\npublic class EventBus {\n    ConcurrentQueue<System.Action> queue = new();\n    public void Enqueue(System.Action a) => queue.Enqueue(a);\n    public void Flush() { while(queue.TryDequeue(out var a)) a(); }\n}",
+    "notes": "ConcurrentQueue for thread-safe producer-consumer; flush on main thread."
+  },
+  {
+    "pattern_id": "PAT_LOCK_FREE_QUEUE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "TQueue<TFunction<void()>, EQueueMode::Mpsc> CmdQueue;\nvoid EnqueueCmd(TFunction<void()> Fn) { CmdQueue.Enqueue(MoveTemp(Fn)); }\nvoid FlushCmds() {\n    TFunction<void()> Fn;\n    while(CmdQueue.Dequeue(Fn)) { Fn(); }\n}",
+    "notes": "TQueue with MPSC mode is lock-free for multiple producers, single consumer."
+  },
+  {
+    "pattern_id": "PAT_LOCK_FREE_QUEUE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nvar _queue: Array = []\nvar _mutex: Mutex = Mutex.new()\nfunc enqueue(callable: Callable) -> void:\n    _mutex.lock(); _queue.append(callable); _mutex.unlock()\nfunc flush() -> void:\n    _mutex.lock()\n    var batch = _queue.duplicate(); _queue.clear()\n    _mutex.unlock()\n    for c in batch: c.call()",
+    "notes": "Mutex-guarded queue; GDScript lacks atomics so mutex is required."
+  },
+  {
+    "pattern_id": "PAT_BATCH_RENDERER",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using UnityEngine;\npublic class BatchDraw : MonoBehaviour {\n    public Mesh mesh; public Material mat;\n    Matrix4x4[] matrices = new Matrix4x4[1023];\n    void Update() {\n        for(int i=0;i<matrices.Length;i++)\n            matrices[i]=Matrix4x4.TRS(new Vector3(i%32,0,i/32),Quaternion.identity,Vector3.one);\n        Graphics.DrawMeshInstanced(mesh,0,mat,matrices);\n    }\n}",
+    "notes": "DrawMeshInstanced batches up to 1023 instances per call."
+  },
+  {
+    "pattern_id": "PAT_BATCH_RENDERER",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "UCLASS()\nclass ABatchSpawner : public AActor {\n    GENERATED_BODY()\n    UPROPERTY() UInstancedStaticMeshComponent* ISM;\n    void BeginPlay() override {\n        ISM = NewObject<UInstancedStaticMeshComponent>(this);\n        ISM->RegisterComponent();\n        for(int32 i=0;i<1000;i++)\n            ISM->AddInstance(FTransform(FVector(i%32*100,i/32*100,0)));\n    }\n};",
+    "notes": "InstancedStaticMeshComponent batches draw calls via hardware instancing."
+  },
+  {
+    "pattern_id": "PAT_BATCH_RENDERER",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends MultiMeshInstance3D\nfunc _ready():\n    multimesh = MultiMesh.new()\n    multimesh.transform_format = MultiMesh.TRANSFORM_3D\n    multimesh.instance_count = 1000\n    multimesh.mesh = preload(\"res://mesh.tres\")\n    for i in 1000:\n        var t = Transform3D()\n        t.origin = Vector3((i%32)*2.0, 0, (i/32)*2.0)\n        multimesh.set_instance_transform(i, t)",
+    "notes": "MultiMesh renders thousands of instances in a single draw call."
+  },
+  {
+    "pattern_id": "PAT_ASYNC_COMPUTE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using UnityEngine;\nusing Unity.Collections;\nusing Unity.Jobs;\nstruct PathJob : IJob {\n    public NativeArray<Vector3> Waypoints;\n    public void Execute() {\n        for(int i=1;i<Waypoints.Length;i++)\n            Waypoints[i]=Vector3.Lerp(Waypoints[i-1],Waypoints[i],0.5f);\n    }\n}\n// var handle = new PathJob{Waypoints=arr}.Schedule(); handle.Complete();",
+    "notes": "IJob runs on a worker thread; call Complete() before reading results."
+  },
+  {
+    "pattern_id": "PAT_ASYNC_COMPUTE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [this]() {\n    // Heavy computation off game thread\n    TArray<float> Results;\n    for(int32 i=0;i<10000;i++) Results.Add(FMath::Sqrt((float)i));\n    AsyncTask(ENamedThreads::GameThread, [this, Results=MoveTemp(Results)]() {\n        // Back on game thread with results\n        OnComputeComplete(Results);\n    });\n});",
+    "notes": "AsyncTask dispatches to background then returns results on game thread."
+  },
+  {
+    "pattern_id": "PAT_ASYNC_COMPUTE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nfunc _ready():\n    var task_id = WorkerThreadPool.add_task(_compute)\nfunc _compute():\n    var data = []\n    for i in 10000: data.append(sqrt(float(i)))\n    call_deferred(\"_on_done\", data)\nfunc _on_done(data: Array):\n    print(\"Computed \", data.size(), \" values\")",
+    "notes": "WorkerThreadPool added in Godot 4; call_deferred to sync back."
+  },
+  {
+    "pattern_id": "PAT_FRAME_GRAPH",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using UnityEngine.Rendering;\npublic class FrameGraphPass : ScriptableRenderPass {\n    public override void Execute(ScriptableRenderContext ctx, ref RenderingData data) {\n        var cmd = CommandBufferPool.Get(\"MyPass\");\n        cmd.DrawMesh(/* ... */);\n        ctx.ExecuteCommandBuffer(cmd);\n        CommandBufferPool.Release(cmd);\n    }\n}",
+    "notes": "SRP ScriptableRenderPass is Unity's frame-graph building block."
+  },
+  {
+    "pattern_id": "PAT_FRAME_GRAPH",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "void FMyPass::AddPass(FRDGBuilder& GraphBuilder) {\n    auto* PassParams = GraphBuilder.AllocParameters<FMyPassParams>();\n    PassParams->Output = GraphBuilder.CreateTexture(Desc, TEXT(\"MyOutput\"));\n    GraphBuilder.AddPass(RDG_EVENT_NAME(\"MyPass\"), PassParams, ERDGPassFlags::Raster,\n        [PassParams](FRHICommandListImmediate& RHICmdList) {\n            // Draw calls here\n        });\n}",
+    "notes": "RDG (Render Dependency Graph) is UE5's frame-graph system."
+  },
+  {
+    "pattern_id": "PAT_FRAME_GRAPH",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends CompositorEffect\nfunc _render_callback(effect_id: int, render_data: RenderData) -> void:\n    var rd := RenderingServer.get_rendering_device()\n    var draw_list := rd.draw_list_begin(render_data.get_color_attachment())\n    # Bind pipeline and draw\n    rd.draw_list_end()\n    rd.submit()",
+    "notes": "Godot 4 CompositorEffect with RenderingDevice for custom render passes."
+  },
+  {
+    "pattern_id": "PAT_PROPERTY_TEST",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using NUnit.Framework;\n[TestFixture]\npublic class InventoryPropertyTests {\n    [Test] public void AddRemove_Roundtrip([Random(1,100,10)] int count) {\n        var inv = new Inventory();\n        for(int i=0;i<count;i++) inv.Add(new Item(\"test\"));\n        for(int i=0;i<count;i++) inv.RemoveAt(0);\n        Assert.AreEqual(0, inv.Count);\n    }\n}",
+    "notes": "NUnit Random attribute generates varied inputs for property testing."
+  },
+  {
+    "pattern_id": "PAT_PROPERTY_TEST",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInventoryPropTest,\"Game.Inventory.Property\",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)\nbool FInventoryPropTest::RunTest(const FString&) {\n    for(int32 N=1;N<=50;N++) {\n        UInventory* Inv=NewObject<UInventory>();\n        for(int32 i=0;i<N;i++) Inv->AddItem(TEXT(\"Test\"));\n        for(int32 i=0;i<N;i++) Inv->RemoveAt(0);\n        TestEqual(TEXT(\"Empty\"),Inv->Num(),0);\n    } return true;\n}",
+    "notes": "UE automation test iterates over varied counts as a property check."
+  },
+  {
+    "pattern_id": "PAT_PROPERTY_TEST",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends GutTest\nfunc test_add_remove_roundtrip():\n    for count in range(1, 50):\n        var inv = Inventory.new()\n        for i in count: inv.add_item(\"test\")\n        for i in count: inv.remove_at(0)\n        assert_eq(inv.size(), 0, \"Should be empty after %d adds/removes\" % count)",
+    "notes": "GUT framework; loop over sizes simulates property-based testing."
+  },
+  {
+    "pattern_id": "PAT_LOAD_TEST_MP",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using Unity.Netcode;\npublic class LoadTest : MonoBehaviour {\n    public int BotCount = 50;\n    void Start() {\n        for(int i=0;i<BotCount;i++) {\n            var bot = Instantiate(botPrefab);\n            bot.GetComponent<NetworkObject>().Spawn();\n            bot.GetComponent<BotAI>().StartRandom();\n        }\n    }\n}",
+    "notes": "Spawns simulated bots via Netcode for GameObjects to stress-test the server."
+  },
+  {
+    "pattern_id": "PAT_LOAD_TEST_MP",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "void ALoadTestManager::SpawnBots(int32 Count) {\n    for(int32 i=0;i<Count;i++) {\n        FActorSpawnParameters Params;\n        Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;\n        auto* Bot=GetWorld()->SpawnActor<ABotPawn>(BotClass,FTransform::Identity,Params);\n        Bot->StartRandomMovement();\n    }\n    UE_LOG(LogTemp,Log,TEXT(\"Spawned %d bots\"),Count);\n}",
+    "notes": "Server-side bot spawning for dedicated server load testing."
+  },
+  {
+    "pattern_id": "PAT_LOAD_TEST_MP",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\n@export var bot_scene: PackedScene\n@export var bot_count: int = 50\nfunc _ready():\n    for i in bot_count:\n        var bot = bot_scene.instantiate()\n        bot.name = \"Bot_%d\" % i\n        add_child(bot)\n        bot.start_random.call_deferred()\n    print(\"Spawned %d bots\" % bot_count)",
+    "notes": "Instantiates bot scenes for multiplayer load testing via ENet or WebSocket."
+  },
+  {
+    "pattern_id": "PAT_NETWORK_SIM",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using Unity.Netcode;\npublic class NetSimConfig : MonoBehaviour {\n    void Start() {\n        var transport = GetComponent<UnityTransport>();\n        transport.SetDebugSimulatorParameters(\n            packetDelay: 120, packetJitter: 40, dropRate: 5);\n    }\n}",
+    "notes": "UnityTransport debug simulator adds artificial latency, jitter, and packet loss."
+  },
+  {
+    "pattern_id": "PAT_NETWORK_SIM",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "// Console commands for network emulation:\n// PktLag=120      - 120ms round-trip latency\n// PktLagVariance=40 - +/-40ms jitter\n// PktLoss=5       - 5% packet loss\nvoid AMyGameMode::EnableNetSim() {\n    GEngine->Exec(GetWorld(), TEXT(\"Net PktLag=120\"));\n    GEngine->Exec(GetWorld(), TEXT(\"Net PktLagVariance=40\"));\n    GEngine->Exec(GetWorld(), TEXT(\"Net PktLoss=5\"));\n}",
+    "notes": "UE built-in net emulation via console commands; no plugin required."
+  },
+  {
+    "pattern_id": "PAT_NETWORK_SIM",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends Node\nvar _delay_ms: int = 120\nvar _jitter_ms: int = 40\nvar _loss_pct: float = 5.0\nvar _buffer: Array = []\nfunc send_with_sim(peer_id: int, data: PackedByteArray) -> void:\n    if randf() * 100.0 < _loss_pct: return\n    var delay = (_delay_ms + randi_range(-_jitter_ms, _jitter_ms)) / 1000.0\n    _buffer.append({\"t\": Time.get_ticks_msec()+delay*1000, \"peer\": peer_id, \"data\": data})\nfunc _process(_d):\n    while _buffer.size()>0 and _buffer[0].t<=Time.get_ticks_msec():\n        multiplayer.send_bytes(_buffer.pop_front().data)",
+    "notes": "Manual network condition simulation layer for Godot multiplayer."
+  },
+  {
+    "pattern_id": "PAT_PERF_CI_GATE",
+    "engine": "unity",
+    "language": "csharp",
+    "code": "using NUnit.Framework;\nusing Unity.PerformanceTesting;\n[TestFixture]\npublic class PerfGateTests {\n    [Test, Performance]\n    public void PhysicsStep_Under2ms() {\n        Measure.Method(() => { Physics.Simulate(Time.fixedDeltaTime); })\n            .WarmupCount(3).MeasurementCount(20).Run();\n        // CI asserts via Unity Performance Benchmark Reporter\n    }\n}",
+    "notes": "Unity Performance Testing package with CI benchmark reporter for regression gating."
+  },
+  {
+    "pattern_id": "PAT_PERF_CI_GATE",
+    "engine": "unreal",
+    "language": "cpp",
+    "code": "IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPerfGate,\"Game.Perf.TickBudget\",EAutomationTestFlags::EditorContext|EAutomationTestFlags::EngineFilter)\nbool FPerfGate::RunTest(const FString&) {\n    double Start=FPlatformTime::Seconds();\n    for(int32 i=0;i<100;i++) GetWorld()->Tick(LEVELTICK_All,0.016f);\n    double Ms=(FPlatformTime::Seconds()-Start)*1000.0/100.0;\n    TestTrue(TEXT(\"Avg tick < 16ms\"),Ms<16.0);\n    return true;\n}",
+    "notes": "UE automation test measuring average tick time for CI performance gating."
+  },
+  {
+    "pattern_id": "PAT_PERF_CI_GATE",
+    "engine": "godot",
+    "language": "gdscript",
+    "code": "extends GutTest\nfunc test_frame_budget():\n    var times: Array[float] = []\n    for i in 100:\n        var start = Time.get_ticks_usec()\n        get_tree().process_frame.emit()\n        times.append((Time.get_ticks_usec() - start) / 1000.0)\n    var avg = times.reduce(func(a,b): return a+b) / times.size()\n    assert_lt(avg, 16.0, \"Average frame time should be under 16ms\")",
+    "notes": "GUT-based perf test measuring frame budget for CI gate checks."
+  }
+]

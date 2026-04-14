@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeide.com/schema/kb/edge/v1",
+  "title": "ForgeIDE KB Edge",
+  "description": "Schema for a relationship edge between two patterns",
+  "type": "object",
+  "required": ["from", "to", "rel"],
+  "properties": {
+    "from": {
+      "type": "string",
+      "pattern": "^PAT_[A-Z0-9_]+$",
+      "description": "Source pattern ID"
+    },
+    "to": {
+      "type": "string",
+      "pattern": "^PAT_[A-Z0-9_]+$",
+      "description": "Target pattern ID"
+    },
+    "rel": {
+      "type": "string",
+      "enum": ["often_combined_with", "alternatives", "requires", "conflicts_with", "extends"],
+      "description": "Relationship type between the two patterns"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forgeide.com/schema/kb/pattern/v1",
+  "title": "ForgeIDE KB Pattern",
+  "description": "Schema for a single game development pattern in the ForgeIDE knowledge base",
+  "type": "object",
+  "required": ["id", "name", "domain", "summary", "when_to_use", "pitfalls", "complexity", "engine_tags", "genre_tags"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^PAT_[A-Z0-9_]+$",
+      "description": "Unique pattern identifier, e.g. PAT_GAME_LOOP"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable pattern name"
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["programming", "optimization", "design", "engineering", "networking", "audio", "rendering", "physics", "testing", "ui", "narrative", "accessibility", "economy"],
+      "description": "Primary domain for this pattern"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief description of the pattern and its purpose"
+    },
+    "when_to_use": {
+      "type": "string",
+      "description": "Guidance on when this pattern is appropriate"
+    },
+    "pitfalls": {
+      "type": "string",
+      "description": "Common mistakes and gotchas"
+    },
+    "complexity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Relative complexity rating (1 = simple, 5 = very complex)"
+    },
+    "engine_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["unity", "unreal", "godot", "custom", "all"]
+      },
+      "description": "Engines this pattern applies to"
+    },
+    "genre_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Game genres or categories this pattern relates to"
+    }
+  },
+  "additionalProperties": false
+}
